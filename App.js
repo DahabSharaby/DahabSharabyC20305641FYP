@@ -2,9 +2,12 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button } from 'react-native';
 
 export default function App() {
-  const handleButtonPress = () => {
-    // Define the action you want to perform when the button is pressed.
-    alert('Button Pressed');
+  const handleButton1Press = () => {
+    alert('Button 1 Pressed');
+  };
+  
+  const handleButton2Press = () => {
+    alert('Button 2 Pressed');
   };
 
   return (
@@ -13,8 +16,9 @@ export default function App() {
         <Text>Hello World?!</Text>
         <Text>Dahab Sharaby</Text>
       </View>
-      <View style={styles.buttonContainer}>
-        <Button title="Press Me" onPress={handleButtonPress} />
+        <View style={styles.buttonContainer}>
+        <Button title="Button 1" onPress={handleButton1Press} />
+        <Button title="Button 2" onPress={handleButton2Press} />
       </View>
       <StatusBar style="auto" />
     </View>
@@ -25,15 +29,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  input: {
+    width: 300, 
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 20, 
   },
   buttonContainer: {
-    paddingBottom: 20, // You can adjust the value to control the spacing between the content and the button
-    paddingHorizontal: 20, // Optional padding for the button container
+    flexDirection: 'row', 
   },
 });
 
