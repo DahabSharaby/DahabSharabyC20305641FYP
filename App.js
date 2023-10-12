@@ -1,27 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
+//import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button } from 'react-native';
+import * as React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import "react-native-gesture-handler";
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import LoginScreen from './screens/LoginScreen';
+//import android.os.Bundle;
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const handleButton1Press = () => {
-    alert('Button 1 Pressed');
-  };
-  
-  const handleButton2Press = () => {
-    alert('Button 2 Pressed');
-  };
-
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text>Hello World?!</Text>
-        <Text>Dahab Sharaby</Text>
-      </View>
-        <View style={styles.buttonContainer}>
-        <Button title="Button 1" onPress={handleButton1Press} />
-        <Button title="Button 2" onPress={handleButton2Press} />
-      </View>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator>
+      <Stack.Screen name='Login' component={LoginScreen}/>
+      </Stack.Navigator>
+      
+      </NavigationContainer>
   );
 }
 
