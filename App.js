@@ -6,6 +6,7 @@ import "react-native-gesture-handler";
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import MainScreen from './screens/MainScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -15,6 +16,7 @@ export default function App() {
       <Stack.Navigator>
       <Stack.Screen name='Login' component={LoginScreen}/>
       <Stack.Screen name='Register' component={RegisterScreen}/>
+      <Stack.Screen name='Main' component={MainScreen}/>
       </Stack.Navigator>
       
       </NavigationContainer>

@@ -3,7 +3,8 @@ import {StyleSheet, Text, View } from 'react-native'
 import {Button, Input, Impage } from "react-native-elements";
 import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
-import RegisterScreen from './RegisterScreen';
+
+
 
 
 const LoginScreen = ({navigation}) => {
@@ -22,10 +23,10 @@ const LoginScreen = ({navigation}) => {
 
             </View>
 
-            <Button onPress={()=> navigation.naigate(Main)} 
+            <Button onPress={() => navigation.navigate("Main")} 
              containerStyle={styles.button} title="Login"/>
             
-            <Button onPress={()=> navigation.naigate(Register)} 
+            <Button onPress={() => navigation.navigate("Register")} 
             containerStyle={styles.button} type="outline" title="Regstier"/>
             
          </KeyboardAvoidingView>
