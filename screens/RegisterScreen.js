@@ -6,13 +6,23 @@ import { KeyboardAvoidingView } from 'react-native';
 
 const RegisterScreen = ({navigation}) => {
 
+  const [name, setName] = useState("")
+  const [num, setNumber] = useState("")
   const [email, setEmail] = useState("")
   const [pass, setPassword] = useState("")
+  
   return (
       <KeyboardAvoidingView behavior='padding' style={styles.container}>
           <StatusBar style="light"/>
           <Text>RegisterScreen</Text>
           <View style= {styles.inputContainer}>
+
+              <Input placeholder="Name" autoFocus type="name"
+              value={name} onChangeText={(text) => setName(text)}/>
+
+              <Input placeholder="Number" autoFocus type="num"
+              value={num} onChangeText={(int) => setNumber(int)}/>
+
               <Input placeholder="Email" autoFocus type="email"
               value={email} onChangeText={(text) => setEmail(text)}/>
 

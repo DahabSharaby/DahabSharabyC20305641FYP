@@ -10,6 +10,7 @@ import { KeyboardAvoidingView } from 'react-native';
 const LoginScreen = ({navigation}) => {
     const [email, setEmail] = useState("")
     const [pass, setPassword] = useState("")
+    const [id, setCompanyId] = useState ("")
     return (
         <KeyboardAvoidingView behavior='padding' style={styles.container}>
             <StatusBar style="light"/>
@@ -20,6 +21,9 @@ const LoginScreen = ({navigation}) => {
 
                 <Input placeholder="Password" secureTextEntry type="password"
                 value={pass} onChangeText={(text) => setPassword(text)}/>
+
+                <Input placeholder="CompanyID" autoFocus type="id"
+                value={id} onChangeText={(int) => setCompanyId(int)}/> 
 
             </View>
 
