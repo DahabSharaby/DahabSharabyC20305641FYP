@@ -1,8 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native'
-import React, { useState } from 'react'
-import {Button, Input, Impage } from "react-native-elements";
+import React, { useLayoutEffect , useState } from 'react'
+import {Button, Input } from "react-native-elements";
 import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
+//import { auth } from '../firebase';
 
 const RegisterScreen = ({navigation}) => {
 
@@ -10,7 +11,19 @@ const RegisterScreen = ({navigation}) => {
   const [num, setNumber] = useState("")
   const [email, setEmail] = useState("")
   const [pass, setPassword] = useState("")
-  
+
+  // useLayoutEffect (() => {
+  //   navigation.setOption({
+  //     headerBackTitle: "Press to go back!"
+  //   });
+  // }, [navigation]);
+
+
+
+  //  const register = ()=> {
+   
+  //  };
+
   return (
       <KeyboardAvoidingView behavior='padding' style={styles.container}>
           <StatusBar style="light"/>
@@ -33,9 +46,13 @@ const RegisterScreen = ({navigation}) => {
 
           <Button onPress={() => navigation.navigate("Main")} 
            containerStyle={styles.button} title="Login"/>
+
+          <Button onPress={() => navigation.navigate("Main")} 
+           containerStyle={styles.button} title="Regstier"/>
           
-          <Button onPress={() => navigation.navigate("Register")} 
-          containerStyle={styles.button} type="outline" title="Regstier"/>
+          {/* <Button containerStyle={styles.button} raised onPress={Regstier} title="Regstier"/> */}
+
+
           
        </KeyboardAvoidingView>
   );
