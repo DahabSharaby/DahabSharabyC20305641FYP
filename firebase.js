@@ -1,15 +1,6 @@
-// For Firebase WEB
-//import { initializeApp } from 'firebase/app';
-//import { filterConfig } from 'react-native-gesture-handler/lib/typescript/handlers/gestureHandlerCommon';
-// import from "firebase/database";
-// import "firebase/functions";
-// import "firebase/storage";
-//import firebase from 'firebase/app'
-//import * as firebase from "firebase";
-// import firebase from "firebase/compat/app";
-// import "firebase/compat/firestore";
-// import "firebase/compat/auth";
-
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
+import "firebase/compat/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCc6xj21xQqgcZ6iuWLgD9Vu-g9d2dsxLo",
@@ -21,18 +12,15 @@ const firebaseConfig = {
   measurementId: "G-RVBL31TB5K"
 };
 
-// let app;
+let app;
 
-// if (firebase.apps.lenght === 0) {
-//   app = firebase.initializeApp(firebaseConfig);
+if (firebase.apps.length === 0) {
+  app = firebase.initializeApp(firebaseConfig);
+} else {
+  app = firebase.app();
+}
 
-// }else {
+const auth = firebase.auth();
+const db = firebase.firestore(); 
 
-//   app = firebase.app();
-
-// }
-
-// const auth = firebase.auth();
-// const db = app.firebase();
-
-// export {db,auth}
+export { db, auth };

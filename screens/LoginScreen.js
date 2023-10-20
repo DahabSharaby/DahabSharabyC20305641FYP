@@ -4,9 +4,6 @@ import {Button, Input, Impage } from "react-native-elements";
 import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
 
-
-
-
 const LoginScreen = ({navigation}) => {
     const [email, setEmail] = useState("")
     const [pass, setPassword] = useState("")
