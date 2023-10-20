@@ -3,6 +3,7 @@ import React, { useLayoutEffect , useState } from 'react'
 import {Button, Input } from "react-native-elements";
 import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
+import { auth } from '../firebase';
 //import { auth } from '../firebase';
 
 const RegisterScreen = ({navigation}) => {
@@ -19,10 +20,16 @@ const RegisterScreen = ({navigation}) => {
   // }, [navigation]);
 
 
+//C:\Users\hdgaa\AppData\Local\Android\Sdk
 
-  //  const register = ()=> {
-   
-  //  };
+const register = () => {
+  auth.createUserWithEmailAndPassword(email, password).then((authUser) => {
+      authUser.user.updateProfile({
+          displayName: name,
+          
+      })
+  }).catch((error) => alert(error.message))
+};
 
   return (
       <KeyboardAvoidingView behavior='padding' style={styles.container}>
@@ -50,7 +57,7 @@ const RegisterScreen = ({navigation}) => {
           <Button onPress={() => navigation.navigate("Main")} 
            containerStyle={styles.button} title="Regstier"/>
           
-          {/* <Button containerStyle={styles.button} raised onPress={Regstier} title="Regstier"/> */}
+          <Button containerStyle={styles.button} raised onPress={register} title="Regstier"/>
 
 
           
