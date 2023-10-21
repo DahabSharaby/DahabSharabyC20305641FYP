@@ -8,9 +8,6 @@ const LoginScreen = ({navigation}) => {
     const [email, setEmail] = useState("")
     const [pass, setPassword] = useState("")
     const [id, setCompanyId] = useState ("")
-
-    
-    const signIn = () => 
     //{
     //      useEffect (() => {
     //     const unsubscribe = auth.onAuthStateChanged((authUser) => {
@@ -23,8 +20,7 @@ const LoginScreen = ({navigation}) => {
     //     return unsubscribe;
     // }, []);
     // };
-
-    {
+    const signIn = () => {
         auth.onAuthStateChanged((authUser) => {
                 console.log(authUser);
                           if (authUser){
