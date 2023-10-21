@@ -21,10 +21,13 @@ const RegisterScreen = ({navigation}) => {
 const register = () => {
   auth.createUserWithEmailAndPassword(email, pass).then((authUser) => {
       authUser.user.updateProfile({
-          displayName: name,
+          displayName: name,})
+          console.log(authUser);
+                    if (authUser){
+                        navigation.replace("Main");
+                    } 
           
-      })
-  }).catch((error) => alert(error.message))
+      }).catch((error) => alert(error.message))
 };
 
   return (
