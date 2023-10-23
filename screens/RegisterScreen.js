@@ -51,7 +51,7 @@ const register = () => {
 
           </View>
 
-          <Button onPress={() => navigation.navigate("Main")} 
+          <Button onPress={() => navigation.navigate("Login")} 
            containerStyle={styles.button} title="Login"/>
           
           <Button containerStyle={styles.button} raised onPress={register} 

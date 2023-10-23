@@ -9,27 +9,37 @@ const LoginScreen = ({navigation}) => {
     const [pass, setPassword] = useState("")
     const [id, setCompanyId] = useState ("")
     
-    //{
-    //      useEffect (() => {
-    //     const unsubscribe = auth.onAuthStateChanged((authUser) => {
-    //            // console.log(authUser);
-    //             if (authUser){
-    //                 navigation.replace("Main");
-    //             } 
-    //     });
-
-    //     return unsubscribe;
-    // }, []);
-    // };
-    const signIn = () => {
-        auth.onAuthStateChanged((authUser) => {
+    {
+         useEffect (() => {
+        const unsubscribe = auth.onAuthStateChanged((authUser) => {
                 console.log(authUser);
-                          if (authUser){
-                              navigation.replace("Main");
-                          } 
+                if (authUser){
+                    navigation.navigate("Main");
+                } 
+        });
+
+        return unsubscribe;
+    }, []);
+    };
+
+    const signIn = () => {
+        auth.signInWithEmailAndPassword(email, pass).catch((error) => alert(error))
+    }
+
+
+    // const signIn = () => {
+    //     auth.onAuthStateChanged((authUser) => {
+
+    //         const signIn = () => {
+    //             auth.signInWithEmailAndPassword(email, password).catch((error) => alert(error))
+    //         }
+    //             // console.log(authUser);
+    //             //           if (authUser){
+    //             //               navigation.replace("Main");
+    //             //           } 
                 
-            }).catch((error) => alert(error.message))
-      };
+    //         }).catch((error) => alert(error.message))
+    //   };
       
     return (
         <KeyboardAvoidingView behavior='padding' style={styles.container}>
