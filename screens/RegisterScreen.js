@@ -5,6 +5,7 @@ import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
 import { auth } from '../firebase';
 
+
 const RegisterScreen = ({navigation}) => {
 
   const [name, setName] = useState("")

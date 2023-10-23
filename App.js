@@ -10,6 +10,7 @@ import MainScreen from './screens/MainScreen';
 
 const Stack = createNativeStackNavigator();
 
+
 export default function App() {
   return (
     <NavigationContainer>

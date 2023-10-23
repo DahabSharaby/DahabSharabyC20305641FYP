@@ -8,6 +8,7 @@ const LoginScreen = ({navigation}) => {
     const [email, setEmail] = useState("")
     const [pass, setPassword] = useState("")
     const [id, setCompanyId] = useState ("")
+    
     //{
     //      useEffect (() => {
     //     const unsubscribe = auth.onAuthStateChanged((authUser) => {
