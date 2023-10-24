@@ -1,12 +1,15 @@
 import { StyleSheet, Text, View, TouchableOpacity  } from 'react-native'
 import React from 'react'
 import { auth } from '../firebase';
+import { KeyboardAvoidingView } from 'react-native';
+import {StatusBar } from "expo-status-bar";
+import {Button, Input, } from "react-native-elements";
 
 const MainScreen = ({navigation}) => {
 
   const signOutUser = () => {
     auth.signOut().then(() => {
-        navigation.replace('Register')
+        navigation.replace('Welcome')
     })
 }
 
@@ -19,10 +22,7 @@ return (
 
       <View style= {styles.inputContainer}>
       <Text>MainScreen</Text>
-      <TouchableOpacity onPress={signOutUser}>
-                        <Text> Sign Out</Text>
-                    </TouchableOpacity>
-    
+     
        </View>
 
       <Button onPress={() => navigation.navigate("Scanner")} 
@@ -33,6 +33,10 @@ return (
 
       <Button onPress={() => navigation.navigate("Dashboard")} 
       containerStyle={styles.button} type="outline" title="Dashboard"/>
+
+<TouchableOpacity onPress={signOutUser}>
+                        <Text> Sign Out</Text>
+                    </TouchableOpacity>
       
    </KeyboardAvoidingView>
 );
