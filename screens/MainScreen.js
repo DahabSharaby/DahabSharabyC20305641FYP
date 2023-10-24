@@ -13,8 +13,6 @@ const MainScreen = ({navigation}) => {
     })
 }
 
-
-
 return (
   <KeyboardAvoidingView behavior='padding' style={styles.container}>
       <StatusBar style="light"/>

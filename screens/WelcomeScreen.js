@@ -1,32 +1,16 @@
 import { StyleSheet, Text, View, TouchableOpacity  } from 'react-native'
 import React from 'react'
-import { auth } from '../firebase';
 import { KeyboardAvoidingView } from 'react-native';
 import {StatusBar } from "expo-status-bar";
-//import {StyleSheet, View } from 'react-native'
 import {Button, Input, } from "react-native-elements";
 
 const WelcomeScreen = ({navigation}) => {
-
-  const signOutUser = () => {
-    auth.signOut().then(() => {
-        navigation.replace('Register')
-    })
-}
-
-//   return (
-//     <View>
-//    
-
-// </View>
-//   )
-
 return (
   <KeyboardAvoidingView behavior='padding' style={styles.container}>
       <StatusBar style="light"/>
 
-      <View style= {styles.inputContainer}>
-      <Text>Welcome</Text>
+      <View style={styles.contentContainer}>
+        <Text style={styles.header}>Welcome</Text>
      
     
        <Button onPress={() => navigation.navigate("Login")} 
@@ -41,10 +25,27 @@ return (
 );
 }
 
-
-
 export default WelcomeScreen
 
-const styles = StyleSheet.create({
-
-})
+  const styles = StyleSheet.create({
+      container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+    },
+    contentContainer: {
+      width: '100%',
+    },
+    header: {
+      fontSize: 30, 
+      textAlign: 'center', 
+      marginBottom: 10,
+    },
+    button: {
+      marginTop: 10,
+    },
+    buttonStyle: {
+      width: '100%',  
+    },
+  });

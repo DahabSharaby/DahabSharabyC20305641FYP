@@ -27,14 +27,18 @@ const register = () => {
                     if (authUser){
                         navigation.replace("Main");
                     } 
+      setName('');
+      setNumber('');
+      setEmail('');
+      setPassword('');
           
       }).catch((error) => alert(error.message))
 };
 
+
   return (
       <KeyboardAvoidingView behavior='padding' style={styles.container}>
           <StatusBar style="light"/>
-          <Text>RegisterScreen</Text>
           <View style= {styles.inputContainer}>
 
               <Input placeholder="Name" autoFocus type="name"

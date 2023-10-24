@@ -23,8 +23,14 @@ const LoginScreen = ({navigation}) => {
     };
 
     const signIn = () => {
-        auth.signInWithEmailAndPassword(email, pass).catch((error) => alert(error))
-    }
+        auth.signInWithEmailAndPassword(email, pass)
+              .then(() => {
+                setEmail('');
+                setPassword('');
+                setCompanyId('');
+              })
+              .catch((error) => alert(error));
+          };
       
     return (
         <KeyboardAvoidingView behavior='padding' style={styles.container}>
