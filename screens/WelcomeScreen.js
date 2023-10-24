@@ -1,6 +1,10 @@
 import { StyleSheet, Text, View, TouchableOpacity  } from 'react-native'
 import React from 'react'
 import { auth } from '../firebase';
+import { KeyboardAvoidingView } from 'react-native';
+import {StatusBar } from "expo-status-bar";
+//import {StyleSheet, View } from 'react-native'
+import {Button, Input, } from "react-native-elements";
 
 const WelcomeScreen = ({navigation}) => {
 
@@ -23,27 +27,16 @@ return (
 
       <View style= {styles.inputContainer}>
       <Text>Welcome</Text>
-     <TouchableOpacity onPress={signOutUser}>
-           <Text> Sign Out</Text>
-           </TouchableOpacity>
+     
     
-      {/* <Button onPress={() => navigation.navigate("Login")} 
+       <Button onPress={() => navigation.navigate("Login")} 
       containerStyle={styles.button} title="Login"/>
 
       <Button onPress={() => navigation.navigate("Register")} 
-/      containerStyle={styles.button} title="Login"/> */}
+     containerStyle={styles.button} title="Register"/> 
 
 
       </View>
-
-      <Button containerStyle={styles.button} onPress={signIn} title="Login"/>
-
-      {/* <Button onPress={() => navigation.navigate("Main")} 
-       containerStyle={styles.button} title="Login"/> */}
-      
-      <Button onPress={() => navigation.navigate("Register")} 
-      containerStyle={styles.button} type="outline" title="Regstier"/>
-      
    </KeyboardAvoidingView>
 );
 }
@@ -52,4 +45,6 @@ return (
 
 export default WelcomeScreen
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+
+})

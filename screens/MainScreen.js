@@ -10,18 +10,34 @@ const MainScreen = ({navigation}) => {
     })
 }
 
-  return (
-    <View>
+
+
+return (
+  <KeyboardAvoidingView behavior='padding' style={styles.container}>
+      <StatusBar style="light"/>
+      
+
+      <View style= {styles.inputContainer}>
       <Text>MainScreen</Text>
       <TouchableOpacity onPress={signOutUser}>
                         <Text> Sign Out</Text>
                     </TouchableOpacity>
-      
-    </View>
-
     
-  )
-}
+       </View>
+
+      <Button onPress={() => navigation.navigate("Scanner")} 
+      containerStyle={styles.button} type="outline" title="Scanner"/>
+
+      <Button onPress={() => navigation.navigate("Input")} 
+      containerStyle={styles.button} type="outline" title="Input"/>
+
+      <Button onPress={() => navigation.navigate("Dashboard")} 
+      containerStyle={styles.button} type="outline" title="Dashboard"/>
+      
+   </KeyboardAvoidingView>
+);
+
+      }
 
 
 
