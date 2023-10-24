@@ -23,8 +23,14 @@ const LoginScreen = ({navigation}) => {
     };
 
     const signIn = () => {
-        auth.signInWithEmailAndPassword(email, pass).catch((error) => alert(error))
-    }
+        auth.signInWithEmailAndPassword(email, pass)
+              .then(() => {
+                setEmail('');
+                setPassword('');
+                setCompanyId('');
+              })
+              .catch((error) => alert(error));
+          };
       
     return (
         <KeyboardAvoidingView behavior='padding' style={styles.container}>
@@ -43,10 +49,7 @@ const LoginScreen = ({navigation}) => {
             </View>
 
             <Button containerStyle={styles.button} onPress={signIn} title="Login"/>
-
-            {/* <Button onPress={() => navigation.navigate("Main")} 
-             containerStyle={styles.button} title="Login"/> */}
-            
+        
             <Button onPress={() => navigation.navigate("Register")} 
             containerStyle={styles.button} type="outline" title="Regstier"/>
             
