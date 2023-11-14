@@ -3,7 +3,8 @@ import React, { useLayoutEffect , useState } from 'react'
 import {Button, Input } from "react-native-elements";
 import {StatusBar } from "expo-status-bar";
 import { KeyboardAvoidingView } from 'react-native';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+
 
 
 const RegisterScreen = ({navigation}) => {
@@ -19,21 +20,51 @@ const RegisterScreen = ({navigation}) => {
   //   });
   // }, [navigation]);
 
+// const register = () => {
+//   auth.createUserWithEmailAndPassword(email, pass).then((authUser) => {
+//       authUser.user.updateProfile({
+//           displayName: name,})
+//           console.log(authUser);
+//                     if (authUser){
+//                         navigation.replace("Main");
+//                     } 
+//       setName('');
+//       setNumber('');
+//       setEmail('');
+//       setPassword('');
+          
+//       }).catch((error) => alert(error.message))
+// };
+
 const register = () => {
-  auth.createUserWithEmailAndPassword(email, pass).then((authUser) => {
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then((authUser) => {
+      db.collection('/users').doc(authUser.user.uid).set({
+        usersEmail: email,
+        usersPaswsword: pass,
+        usersName: name,
+        usersNumber: num, 
+        
+      });
+
       authUser.user.updateProfile({
-          displayName: name,})
-          console.log(authUser);
-                    if (authUser){
-                        navigation.replace("Main");
-                    } 
+        displayName: name,
+      });
+
+      console.log(authUser);
+
+      if (authUser) {
+        navigation.replace("Main");
+      }
+
       setName('');
       setNumber('');
       setEmail('');
       setPassword('');
-          
-      }).catch((error) => alert(error.message))
+    })
+    .catch((error) => alert(error.message));
 };
+
 
 
   return (

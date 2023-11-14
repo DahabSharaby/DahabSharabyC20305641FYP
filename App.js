@@ -8,7 +8,7 @@ import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import MainScreen from './screens/MainScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
-import ScannerScreen from './screens/ScannerScreen';
+import ScannerScreen from './screens/ScannerScreen.js';
 import InputScreen from './screens/InputScreen';
 import DashboardScreen from './screens/DashboardScreen';
 
