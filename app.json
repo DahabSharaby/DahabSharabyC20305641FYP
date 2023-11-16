@@ -2,6 +2,15 @@
   "expo": {
     "name": "DahabSharabyC20305641FYP",
     "slug": "DahabSharabyC20305641FYP",
+    "plugins":[
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "the app accesses your photos"
+        }
+      ]
+
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
