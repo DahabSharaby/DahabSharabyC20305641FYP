@@ -1,43 +1,33 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet, View, Image, TouchableOpacity } from 'react-native';
-import axios from 'axios';
+import { Text, StyleSheet, View, Image, TouchableOpacity, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import axios from 'axios';
 
 const ScannerScreen = () => {
   const [imageUri, setImageUri] = useState(null);
-  const [labels, setLabels] = useState([]);
+  const [recognizedText, setRecognizedText] = useState('');
 
   const pickImage = async () => {
-    try {
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
 
-      if (!result.cancelled) {
-        setImageUri(result.assets[0].uri);
-      }
-      console.log(result);
-    } catch (error) {
-      console.error('Error picking image:', error);
+    if (!result.cancelled) {
+      setImageUri(result.uri);
+      analyzeImage(result.uri);
     }
   };
 
-  const analyzeImage = async () => {
+  const analyzeImage = async (uri) => {
     try {
-      if (!imageUri) {
-        alert('Please pick an image');
-        return;
-      }
-
-      
-      const apiKey = "AIzaSyBJ3FyjJzcNMApNqb7itGQBGP4wE6BO5bI"; 
+      const apiKey = 'AIzaSyBJ3FyjJzcNMApNqb7itGQBGP4wE6BO5bI'; 
       const apiURL = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
-      const base64ImageData = await FileSystem.readAsStringAsync(imageUri, {
+      const base64ImageData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
@@ -47,49 +37,39 @@ const ScannerScreen = () => {
             image: {
               content: base64ImageData,
             },
-            features: [{ type: 'LABEL_DETECTION', maxResults: 5 }], 
+            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
           },
         ],
       };
 
       const apiResponse = await axios.post(apiURL, requestData);
-      setLabels(apiResponse.data.responses[0].labelAnnotations);
+      const detectedText = apiResponse.data.responses[0].fullTextAnnotation.text;
+      setRecognizedText(detectedText);
     } catch (error) {
       console.error('Error analyzing image:', error.response ? error.response.data : error.message);
       alert('Error analyzing image. Please try again.');
     }
-    
   };
 
   return (
     <View style={styles.container}>
-      <Text>Detect Object</Text>
+      <Text>Detect Handwritten Text</Text>
 
       {imageUri && (
-        <Image
-          source={{ uri: imageUri }}
-          style={{ width: 300, height: 300 }} 
-        />
+        <Image source={{ uri: imageUri }} style={{ width: 300, height: 300 }} />
       )}
 
       <TouchableOpacity style={styles.button} onPress={pickImage}>
         <Text style={styles.text}>Choose an image...</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={analyzeImage}>
-        <Text style={styles.text}>Analyze image...</Text>
-      </TouchableOpacity>
-
-      {labels.length > 0 && (
-        <View>
-          <Text style={styles.labels}>Labels:</Text>
-          {labels.map((label) => (
-            <Text key={label.mid} style={styles.outputText}>
-              {label.description}
-            </Text>
-          ))}
-        </View>
-      )}
+      <TextInput
+        style={styles.input}
+        multiline={true}
+        placeholder="Recognized Text"
+        value={recognizedText}
+        onChangeText={(text) => setRecognizedText(text)}
+      />
     </View>
   );
 };
@@ -110,14 +90,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-  labels: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  outputText: {
-    fontSize: 16,
-    marginTop: 5,
+  input: {
+    width: '80%',
+    height: 100,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginTop: 20,
+    padding: 10,
   },
 });
 
