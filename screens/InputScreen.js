@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 
 const InputScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -13,10 +13,20 @@ const InputScreen = ({ navigation }) => {
   const [total, setTotal] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [currentUser, setCurrentUser] = useState(null); 
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user); 
+    });
+    return () => {
+      unsubscribe(); 
+    };
+  }, []);
 
   const generateInvoiceNumber = () => {
     const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    setInvoiceNumber(`INV${randomNumber}`);
+    return `INV${randomNumber}`;
   };
 
   const calculateTotal = () => {
@@ -27,10 +37,8 @@ const InputScreen = ({ navigation }) => {
       setTotal('');
     }
   };
-  
 
   const handleCalculatePress = () => {
-    generateInvoiceNumber();
     calculateTotal();
   };
 
@@ -52,8 +60,16 @@ const InputScreen = ({ navigation }) => {
         return;
       }
 
+      if (!currentUser) {
+        alert('User not logged in');
+        return;
+      }
+
+      const generatedInvoiceNumber = generateInvoiceNumber(); 
+      setInvoiceNumber(generatedInvoiceNumber);
+
       const productData = {
-        invoiceNumber,
+        invoiceNumber: generatedInvoiceNumber,
         name,
         address,
         quantity: parseFloat(quantity),
@@ -61,9 +77,10 @@ const InputScreen = ({ navigation }) => {
         date,
         total: parseFloat(total) || 0,
         phoneNumber: parseFloat(phoneNumber),
+        userId: currentUser.uid, 
       };
 
-      await db.collection('products').add(productData);
+      await db.collection('invoices').add(productData);
       alert('Invoice details saved successfully!');
       
       setName('');
@@ -97,14 +114,14 @@ const InputScreen = ({ navigation }) => {
       <TextInput
         placeholder="Quantity"
         value={quantity}
-        onChangeText={(text) => setQuantity(text)}
+        onChangeText={(text) => { setQuantity(text); calculateTotal(); }} 
         keyboardType="numeric"
         style={styles.input}
       />
       <TextInput
         placeholder="Price"
         value={price}
-        onChangeText={(text) => setPrice(text)}
+        onChangeText={(text) => { setPrice(text); calculateTotal(); }} 
         keyboardType="numeric"
         style={styles.input}
       />
