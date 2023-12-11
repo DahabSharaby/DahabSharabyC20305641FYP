@@ -3,6 +3,7 @@ import { Text, StyleSheet, View, Image, TouchableOpacity, TextInput, Platform, S
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import axios from 'axios';
+import { db , auth} from '../firebase';
 
 const ScannerScreen = () => {
   const [imageUri, setImageUri] = useState(null);
@@ -149,6 +150,36 @@ const ScannerScreen = () => {
     return `INV${randomNumber}`;
   };
 
+  const saveInvoiceToFirestore = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      const userId = currentUser ? currentUser.uid : null;
+
+      if (userId) {
+        const invoiceData = {
+          userId,
+          companyName,
+          companyAddress,
+          productName,
+          quantity,
+          price,
+          phoneNumber,
+          total,
+          invoiceNumber,
+          recognizedText,
+        };
+
+        await db.collection('invoices').add(invoiceData);
+        alert('Invoice data saved to Firestore!');
+      } else {
+        alert('User not authenticated. Please login.');
+      }
+    } catch (error) {
+      console.error('Error saving invoice to Firestore:', error);
+      alert('Error saving invoice data. Please try again.');
+    }
+  };
+
 return (
   <ScrollView contentContainerStyle={styles.scrollViewContainer}>
     <View style={styles.container}>
@@ -221,7 +252,9 @@ return (
         value={invoiceNumber}
         onChangeText={(text) => setInvoiceNumber(text)}
       />
-
+     <TouchableOpacity style={styles.button} onPress={saveInvoiceToFirestore}>
+        <Text style={styles.text}>Save Invoice </Text>
+      </TouchableOpacity>
     
       
     </View>
