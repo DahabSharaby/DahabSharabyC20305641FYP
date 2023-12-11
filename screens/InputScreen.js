@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 
 const InputScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  
+  const [companyName, setCompanyName] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date());
@@ -13,10 +15,20 @@ const InputScreen = ({ navigation }) => {
   const [total, setTotal] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [currentUser, setCurrentUser] = useState(null); 
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user); 
+    });
+    return () => {
+      unsubscribe(); 
+    };
+  }, []);
 
   const generateInvoiceNumber = () => {
     const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    setInvoiceNumber(`INV${randomNumber}`);
+    return `INV${randomNumber}`;
   };
 
   const calculateTotal = () => {
@@ -27,18 +39,17 @@ const InputScreen = ({ navigation }) => {
       setTotal('');
     }
   };
-  
 
   const handleCalculatePress = () => {
-    generateInvoiceNumber();
     calculateTotal();
   };
 
   const handleSaveInvoice = async () => {
     try {
       if (
-        name.trim() === '' ||
-        address.trim() === '' ||
+        companyName.trim() === '' ||
+        companyAddress.trim() === '' ||
+        productName.trim() === '' ||
         quantity.trim() === '' ||
         price.trim() === '' ||
         phoneNumber.trim() === ''
@@ -52,22 +63,33 @@ const InputScreen = ({ navigation }) => {
         return;
       }
 
+      if (!currentUser) {
+        alert('User not logged in');
+        return;
+      }
+
+      const generatedInvoiceNumber = generateInvoiceNumber(); 
+      setInvoiceNumber(generatedInvoiceNumber);
+
       const productData = {
-        invoiceNumber,
-        name,
-        address,
+        invoiceNumber: generatedInvoiceNumber,
+        companyName,
+        companyAddress,
+        productName,
         quantity: parseFloat(quantity),
         price: parseFloat(price),
         date,
         total: parseFloat(total) || 0,
         phoneNumber: parseFloat(phoneNumber),
+        userId: currentUser.uid, 
       };
 
-      await db.collection('products').add(productData);
+      await db.collection('invoices').add(productData);
       alert('Invoice details saved successfully!');
       
-      setName('');
-      setAddress('');
+      setCompanyName('');
+      setCompanyAddress('');
+      setProductName('');
       setQuantity('');
       setPrice('');
       setDate(new Date());
@@ -83,28 +105,34 @@ const InputScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="Name"
-        value={name}
-        onChangeText={(text) => setName(text)}
+        placeholder="Company Name"
+        value={companyName}
+        onChangeText={(text) => setCompanyName(text)}
         style={styles.input}
       />
       <TextInput
-        placeholder="Address"
-        value={address}
-        onChangeText={(text) => setAddress(text)}
+        placeholder="Company Address"
+        value={companyAddress}
+        onChangeText={(text) => setCompanyAddress(text)}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Product Name"
+        value={productName}
+        onChangeText={(text) => setProductName(text)}
         style={styles.input}
       />
       <TextInput
         placeholder="Quantity"
         value={quantity}
-        onChangeText={(text) => setQuantity(text)}
+        onChangeText={(text) => { setQuantity(text); calculateTotal(); }} 
         keyboardType="numeric"
         style={styles.input}
       />
       <TextInput
         placeholder="Price"
         value={price}
-        onChangeText={(text) => setPrice(text)}
+        onChangeText={(text) => { setPrice(text); calculateTotal(); }} 
         keyboardType="numeric"
         style={styles.input}
       />
@@ -155,3 +183,4 @@ const styles = StyleSheet.create({
 });
 
 export default InputScreen;
+

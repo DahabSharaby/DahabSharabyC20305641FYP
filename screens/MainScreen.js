@@ -32,17 +32,15 @@ return (
       <Button onPress={() => navigation.navigate("Dashboard")} 
       containerStyle={styles.button} type="outline" title="Dashboard"/>
 
+      <Button onPress={() => navigation.navigate("Admin")} 
+      containerStyle={styles.button} type="outline" title="Admin"/>
+
 <TouchableOpacity onPress={signOutUser}>
                         <Text> Sign Out</Text>
                     </TouchableOpacity>
-      
-   </KeyboardAvoidingView>
+</KeyboardAvoidingView>
 );
-
-      }
-
-
-
+}
 export default MainScreen
 
 const styles = StyleSheet.create({})
