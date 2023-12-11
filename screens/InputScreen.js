@@ -8,13 +8,13 @@ const InputScreen = ({ navigation }) => {
   const [companyName, setCompanyName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [productName, setProductName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [total, setTotal] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [currentUser, setCurrentUser] = useState(null); 
   
   useEffect(() => {
@@ -76,11 +76,11 @@ const InputScreen = ({ navigation }) => {
         companyName,
         companyAddress,
         productName,
+        phoneNumber: parseFloat(phoneNumber),
         quantity: parseFloat(quantity),
         price: parseFloat(price),
         date,
         total: parseFloat(total) || 0,
-        phoneNumber: parseFloat(phoneNumber),
         userId: currentUser.uid, 
       };
 
@@ -90,12 +90,12 @@ const InputScreen = ({ navigation }) => {
       setCompanyName('');
       setCompanyAddress('');
       setProductName('');
+      setPhoneNumber('');
       setQuantity('');
       setPrice('');
       setDate(new Date());
       setTotal('');
       setInvoiceNumber('');
-      setPhoneNumber('');
     } catch (error) {
       console.error('Error saving to Firebase:', error);
       alert('Failed to save invoice details.');
@@ -114,6 +114,13 @@ const InputScreen = ({ navigation }) => {
         placeholder="Company Address"
         value={companyAddress}
         onChangeText={(text) => setCompanyAddress(text)}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Phone Number"
+        value={phoneNumber}
+        onChangeText={(text) => setPhoneNumber(text)}
+        keyboardType="phone-pad"
         style={styles.input}
       />
       <TextInput
@@ -136,13 +143,7 @@ const InputScreen = ({ navigation }) => {
         keyboardType="numeric"
         style={styles.input}
       />
-      <TextInput
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChangeText={(text) => setPhoneNumber(text)}
-        keyboardType="phone-pad"
-        style={styles.input}
-      />
+      
       <TouchableOpacity onPress={() => setShowDatePicker(true)}>
         <View style={styles.input}>
           <Text>Date: {date.toLocaleDateString()}</Text>
