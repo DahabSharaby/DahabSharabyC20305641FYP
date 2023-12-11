@@ -4,8 +4,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebase';
 
 const InputScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  
+  const [companyName, setCompanyName] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date());
@@ -45,8 +47,9 @@ const InputScreen = ({ navigation }) => {
   const handleSaveInvoice = async () => {
     try {
       if (
-        name.trim() === '' ||
-        address.trim() === '' ||
+        companyName.trim() === '' ||
+        companyAddress.trim() === '' ||
+        productName.trim() === '' ||
         quantity.trim() === '' ||
         price.trim() === '' ||
         phoneNumber.trim() === ''
@@ -70,8 +73,9 @@ const InputScreen = ({ navigation }) => {
 
       const productData = {
         invoiceNumber: generatedInvoiceNumber,
-        name,
-        address,
+        companyName,
+        companyAddress,
+        productName,
         quantity: parseFloat(quantity),
         price: parseFloat(price),
         date,
@@ -83,8 +87,9 @@ const InputScreen = ({ navigation }) => {
       await db.collection('invoices').add(productData);
       alert('Invoice details saved successfully!');
       
-      setName('');
-      setAddress('');
+      setCompanyName('');
+      setCompanyAddress('');
+      setProductName('');
       setQuantity('');
       setPrice('');
       setDate(new Date());
@@ -100,15 +105,21 @@ const InputScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="Name"
-        value={name}
-        onChangeText={(text) => setName(text)}
+        placeholder="Company Name"
+        value={companyName}
+        onChangeText={(text) => setCompanyName(text)}
         style={styles.input}
       />
       <TextInput
-        placeholder="Address"
-        value={address}
-        onChangeText={(text) => setAddress(text)}
+        placeholder="Company Address"
+        value={companyAddress}
+        onChangeText={(text) => setCompanyAddress(text)}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Product Name"
+        value={productName}
+        onChangeText={(text) => setProductName(text)}
         style={styles.input}
       />
       <TextInput
@@ -172,3 +183,4 @@ const styles = StyleSheet.create({
 });
 
 export default InputScreen;
+

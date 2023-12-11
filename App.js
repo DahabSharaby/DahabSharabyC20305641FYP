@@ -1,5 +1,3 @@
-//import { StatusBar } from 'expo-status-bar';
-//import { StyleSheet, Text, View, Button } from 'react-native';
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import "react-native-gesture-handler";
@@ -11,6 +9,10 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import ScannerScreen from './screens/ScannerScreen.js';
 import InputScreen from './screens/InputScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import AdminScreen from './screens/AdminScreen.js';
+import DeleteAccountScreen from './screens/DeleteAccountScreen.js';
+import CustomerScreen from './screens/CustomerScreen.js';
+import ProductScreen from './screens/ProductScreen.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,31 +27,12 @@ export default function App() {
       <Stack.Screen name='Scanner' component={ScannerScreen}/>
       <Stack.Screen name='Input' component={InputScreen}/>
       <Stack.Screen name='Dashboard' component={DashboardScreen}/>
+      <Stack.Screen name='Admin' component={AdminScreen}/>
+      <Stack.Screen name="Customer" component={CustomerScreen} />
+      <Stack.Screen name="Product" component={ProductScreen} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       </Stack.Navigator>
       
       </NavigationContainer>
   );
 }
-
-
-// UNNEEDED FOR NOW
-// // const styles = StyleSheet.create({
-// //   container: {
-// //     flex: 1,
-// //     backgroundColor: '#fff',
-// //     alignItems: 'center',
-// //     justifyContent: 'center',
-// //   },
-// //   input: {
-// //     width: 300, 
-// //     height: 40,
-// //     borderColor: 'gray',
-// //     borderWidth: 1,
-// //     padding: 10,
-// //     marginBottom: 20, 
-// //   },
-// //   buttonContainer: {
-// //     flexDirection: 'row', 
-// //   },
-// });
-
