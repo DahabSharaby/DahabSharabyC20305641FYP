@@ -13,6 +13,7 @@ import AdminScreen from './screens/AdminScreen.js';
 import DeleteAccountScreen from './screens/DeleteAccountScreen.js';
 import CustomerScreen from './screens/CustomerScreen.js';
 import ProductScreen from './screens/ProductScreen.js';
+import CompanyReg from './screens/CompanyReg.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +24,7 @@ export default function App() {
       <Stack.Screen name='Welcome' component={WelcomeScreen}/>
       <Stack.Screen name='Login' component={LoginScreen}/>
       <Stack.Screen name='Register' component={RegisterScreen}/>
+      <Stack.Screen name='Company Registeration' component={CompanyReg}/>
       <Stack.Screen name='Main' component={MainScreen}/>
       <Stack.Screen name='Scanner' component={ScannerScreen}/>
       <Stack.Screen name='Input' component={InputScreen}/>
