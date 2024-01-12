@@ -14,10 +14,13 @@ return (
      
     
        <Button onPress={() => navigation.navigate("Login")} 
-      containerStyle={styles.button} title="Login"/>
+      containerStyle={styles.button} title="Staff Login"/>
 
       <Button onPress={() => navigation.navigate("Register")} 
-     containerStyle={styles.button} title="Register"/> 
+     containerStyle={styles.button} title="Staff Sign up"/> 
+
+      <Button onPress={() => navigation.navigate("Company Registeration")} 
+     containerStyle={styles.button} title="Company Registeration"/> 
 
 
       </View>
