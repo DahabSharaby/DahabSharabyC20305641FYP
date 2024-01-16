@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebase';
+import { productList } from '../helpers/helpers';
 
 const InputScreen = ({ navigation }) => {
   
@@ -16,8 +17,10 @@ const InputScreen = ({ navigation }) => {
   const [total, setTotal] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [currentUser, setCurrentUser] = useState(null); 
+  const test = productList 
   
   useEffect(() => {
+    console.log(test,"our test")
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user); 
     });
