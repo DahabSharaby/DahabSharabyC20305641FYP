@@ -1,5 +1,37 @@
-export function productList() {
-    console.log('hello');
+// export function productList() {
+//     console.log('hello');
+// }
+
+
+import { useEffect, useState } from 'react';
+import firebase from 'firebase/app';
+import 'firebase/firestore';
+
+export function ProductList() {
+  const [productData, setProductData] = useState(null);
+
+  useEffect(() => {
+    const collectionRef = firebase.firestore().collection('products');
+
+    collectionRef
+      .get()
+      .then((querySnapshot) => {
+        const data = [];
+        querySnapshot.forEach((doc) => {
+          data.push({
+            id: doc.id,
+            ...doc.data(),
+          });
+        });
+        setProductData(data);
+      })
+      .catch((error) => {
+        console.error('Firestore Error:', error);
+      });
+  }, []); 
+
+  console.log('Product Data:', productData);
+  return productData;
 }
 //      // Make a GET request using the Fetch API
 //      fetch(apiUrl)
