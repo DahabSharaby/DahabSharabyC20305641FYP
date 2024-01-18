@@ -2,9 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebase';
-import { productList } from '../helpers/helpers';
 
-const InputScreen = ({ navigation }) => {
+export function InputScreen ({ navigation }) {
+  const [productData, setProductData] = useState([]);
+  function ProductList() {
+
+      const collectionRef = db.collection('products');
+     console.log(collectionRef)
+      collectionRef
+        .get()
+        .then((querySnapshot) => {
+          const data = [];
+          querySnapshot.forEach((doc) => {
+            console.log(`${doc.data().productName}`);
+          data.push(doc.data().productName)
+          });
+          setProductData(data);
+        })
+        .catch((error) => {
+          console.error('Firestore Error:', error);
+        });
+  
+    console.log('Product Data:', productData);
+    return productData;
+  }
   
   const [companyName, setCompanyName] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
@@ -17,10 +38,9 @@ const InputScreen = ({ navigation }) => {
   const [total, setTotal] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [currentUser, setCurrentUser] = useState(null); 
-  const test = productList 
   
   useEffect(() => {
-    console.log(test,"our test")
+
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user); 
     });
@@ -86,7 +106,8 @@ const InputScreen = ({ navigation }) => {
         total: parseFloat(total) || 0,
         userId: currentUser.uid, 
       };
-
+      ProductList()
+      console.log(ProductList())
       await db.collection('invoices').add(productData);
       alert('Invoice details saved successfully!');
       
