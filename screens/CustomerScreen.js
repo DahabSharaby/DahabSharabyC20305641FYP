@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
-import { db } from '../firebase'; 
+import { db } from '../firebase';
 
 export default function CustomerScreen() {
-  const [companyName, setCompanyName] = useState('');
-  const [address, setAddress] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -23,13 +23,13 @@ export default function CustomerScreen() {
 
   const addCustomer = () => {
     db.collection('customers').add({
-      companyName,
-      address,
+      customerName,
+      customerAddress,
       phoneNumber,
     });
 
-    setCompanyName('');
-    setAddress('');
+    setCustomerName('');
+    setCustomerAddress('');
     setPhoneNumber('');
   };
 
@@ -40,13 +40,13 @@ export default function CustomerScreen() {
     }
 
     db.collection('customers').doc(selectedCustomer.id).update({
-      companyName,
-      address,
+      customerName,
+      customerAddress,
       phoneNumber,
     });
 
-    setCompanyName('');
-    setAddress('');
+    setCustomerName('');
+    setCustomerAddress('');
     setPhoneNumber('');
     setSelectedCustomer(null);
   };
@@ -59,7 +59,7 @@ export default function CustomerScreen() {
 
     Alert.alert(
       'Confirm Delete',
-      `Are you sure you want to delete ${selectedCustomer.companyName}?`,
+      `Are you sure you want to delete ${selectedCustomer.customerName}?`,
       [
         {
           text: 'Cancel',
@@ -82,14 +82,14 @@ export default function CustomerScreen() {
     <View style={{ flex: 1, padding: 20 }}>
       <Text>Add Customer:</Text>
       <TextInput
-        placeholder="Company Name"
-        value={companyName}
-        onChangeText={setCompanyName}
+        placeholder="Customer Name"
+        value={customerName}
+        onChangeText={setCustomerName}
       />
       <TextInput
-        placeholder="Address"
-        value={address}
-        onChangeText={setAddress}
+        placeholder="Customer Address"
+        value={customerAddress}
+        onChangeText={setCustomerAddress}
       />
       <TextInput
         placeholder="Phone Number"
@@ -104,7 +104,7 @@ export default function CustomerScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-            <Text>{`${item.companyName} - ${item.address} - ${item.phoneNumber}`}</Text>
+            <Text>{`${item.customerName} - ${item.customerAddress} - ${item.phoneNumber}`}</Text>
             <Button title="Edit" onPress={() => setSelectedCustomer(item)} />
           </View>
         )}
@@ -114,14 +114,14 @@ export default function CustomerScreen() {
         <>
           <Text style={{ marginTop: 20 }}>Edit Customer:</Text>
           <TextInput
-            placeholder="Company Name"
-            value={companyName}
-            onChangeText={setCompanyName}
+            placeholder="Customer Name"
+            value={customerName}
+            onChangeText={setCustomerName}
           />
           <TextInput
-            placeholder="Address"
-            value={address}
-            onChangeText={setAddress}
+            placeholder="Customer Address"
+            value={customerAddress}
+            onChangeText={setCustomerAddress}
           />
           <TextInput
             placeholder="Phone Number"
