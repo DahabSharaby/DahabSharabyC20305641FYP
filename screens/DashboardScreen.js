@@ -4,8 +4,9 @@ import { LineChart } from 'react-native-chart-kit';
 import { db, auth } from '../firebase';
 
 const DashboardScreen = () => {
-  const [salesData, setSalesData] = useState([]);
+  const [totalSales, setTotalSales] = useState(0);
   const [dateLabels, setDateLabels] = useState([]);
+  const [salesData, setSalesData] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,33 +32,55 @@ const DashboardScreen = () => {
       const userUid = currentUser.uid;
       console.log('Current User UID:', userUid);
 
-      const invoicesRef = db.collection('invoices');
-      const querySnapshot = await invoicesRef.where('companyID', '==', userUid).get();
+      const usersRef = db.collection('users');
+      const userDoc = await usersRef.doc(userUid).get();
 
-      console.log('Query Snapshot:', querySnapshot);
-
-      if (querySnapshot.empty) {
-        console.log('No documents found for the current user.');
+      if (!userDoc.exists) {
+        setError('User document not found');
         setLoading(false);
         return;
       }
 
-      const salesDataArray = [];
+      const userCompanyId = userDoc.data().companyID;
+
+      console.log('User Company ID:', userCompanyId);
+
+      const invoicesRef = db.collection('invoices');
+      const querySnapshot = await invoicesRef.where('companyId', '==', userCompanyId).get();
+
+      console.log('Query Snapshot:', querySnapshot);
+
+      if (querySnapshot.empty) {
+        console.log('No invoices found for the current user.');
+        setLoading(false);
+        return;
+      }
+
+      const salesDataMap = new Map(); 
       const dateLabelsArray = [];
 
       querySnapshot.forEach((doc) => {
         try {
-          const invoiceDate = doc.data().date.toDate();
           const amount = doc.data().total;
+          const invoiceDate = doc.data().date.toDate();
+          const formattedDateString = formattedDate(invoiceDate);
 
-          salesDataArray.push(amount);
-          dateLabelsArray.push(formattedDate(invoiceDate));
+          if (salesDataMap.has(formattedDateString)) {
+            salesDataMap.set(formattedDateString, salesDataMap.get(formattedDateString) + amount);
+          } else {
+            salesDataMap.set(formattedDateString, amount);
+            dateLabelsArray.push(formattedDateString);
+          }
+
+          setTotalSales((prevTotalSales) => prevTotalSales + amount); 
         } catch (dateError) {
           console.error('Error parsing date:', dateError.message);
         }
       });
 
-      console.log('Sales Data:', salesDataArray);
+      const salesDataArray = dateLabelsArray.map((date) => salesDataMap.get(date) || 0);
+
+      console.log('Total Sales:', totalSales);
       console.log('Date Labels:', dateLabelsArray);
 
       setSalesData(salesDataArray);
@@ -73,7 +96,7 @@ const DashboardScreen = () => {
 
   useEffect(() => {
     fetchData();
-  }, []); // Empty dependency array ensures the effect runs only once when the component mounts
+  }, []);
 
   if (loading) {
     return (
@@ -96,41 +119,36 @@ const DashboardScreen = () => {
 
   return (
     <View>
-      <Text>DashboardScreen</Text>
-
-      <View>
-        <Text>Bezier Line Chart</Text>
-        {/* You can use salesData and dateLabels to render the LineChart */}
-        <LineChart
-          data={{
-            labels: dateLabels,
-            datasets: [
-              {
-                data: salesData,
-                strokeWidth: 2,
-              },
-            ],
-          }}
-          width={Dimensions.get('window').width}
-          height={220}
-          yAxisLabel={'$'}
-          chartConfig={{
-            backgroundColor: '#e26a00',
-            backgroundGradientFrom: '#fb8c00',
-            backgroundGradientTo: '#ffa726',
-            decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16,
+      <Text style={styles.totalSalesText}>Total Sales: ${totalSales}</Text>
+      <LineChart
+        data={{
+          labels: dateLabels,
+          datasets: [
+            {
+              data: salesData,
+              strokeWidth: 2,
             },
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
+          ],
+        }}
+        width={Dimensions.get('window').width}
+        height={220}
+        yAxisLabel={'$'}
+        chartConfig={{
+          backgroundColor: '#e26a00',
+          backgroundGradientFrom: '#fb8c00',
+          backgroundGradientTo: '#ffa726',
+          decimalPlaces: 2,
+          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+          style: {
             borderRadius: 16,
-          }}
-        />
-      </View>
+          },
+        }}
+        bezier
+        style={{
+          marginVertical: 8,
+          borderRadius: 16,
+        }}
+      />
     </View>
   );
 };
@@ -149,6 +167,12 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 16,
+  },
+  totalSalesText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 10,
   },
 });
 
