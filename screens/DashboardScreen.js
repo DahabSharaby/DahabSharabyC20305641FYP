@@ -9,12 +9,12 @@ const DashboardScreen = () => {
   const [salesData, setSalesData] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const formattedDate = (date) => {
     const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
+    return day;
   };
 
   const fetchData = async () => {
@@ -56,7 +56,7 @@ const DashboardScreen = () => {
         return;
       }
 
-      const salesDataMap = new Map(); 
+      const salesDataMap = new Map();
       const dateLabelsArray = [];
 
       querySnapshot.forEach((doc) => {
@@ -72,7 +72,7 @@ const DashboardScreen = () => {
             dateLabelsArray.push(formattedDateString);
           }
 
-          setTotalSales((prevTotalSales) => prevTotalSales + amount); 
+          setTotalSales((prevTotalSales) => prevTotalSales + amount);
         } catch (dateError) {
           console.error('Error parsing date:', dateError.message);
         }
@@ -80,13 +80,29 @@ const DashboardScreen = () => {
 
       const salesDataArray = dateLabelsArray.map((date) => salesDataMap.get(date) || 0);
 
+      const sortedDateLabels = dateLabelsArray.sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA - dateB;
+      });
+
       console.log('Total Sales:', totalSales);
-      console.log('Date Labels:', dateLabelsArray);
+      console.log('Date Labels:', sortedDateLabels);
 
       setSalesData(salesDataArray);
-      setDateLabels(dateLabelsArray);
+      setDateLabels(sortedDateLabels);
       setLoading(false);
-      console.log('Data fetching completed successfully');
+
+      const firstDate = new Date(sortedDateLabels[0]);
+      const lastDate = new Date(sortedDateLabels[sortedDateLabels.length - 1]);
+
+      const formattedFirstDate = `${firstDate.toLocaleString('default', { month: 'long' })} ${firstDate.getFullYear()}`;
+      const formattedLastDate = `${lastDate.toLocaleString('default', { month: 'long' })} ${lastDate.getFullYear()}`;
+      console.log('From:', formattedFirstDate);
+      console.log('To:', formattedLastDate);
+
+      setFromDate(formattedFirstDate);
+      setToDate(formattedLastDate);
     } catch (error) {
       console.error('Error fetching data:', error.message);
       setError(`Error fetching data: ${error.message}`);
@@ -119,7 +135,8 @@ const DashboardScreen = () => {
 
   return (
     <View>
-      <Text style={styles.totalSalesText}>Total Sales: ${totalSales}</Text>
+      <Text style={styles.totalSalesText}>Total Sales: €{totalSales.toFixed(2)}</Text>
+      <Text style={styles.dateRangeText}>{`From: ${fromDate} To: ${toDate}`}</Text>
       <LineChart
         data={{
           labels: dateLabels,
@@ -132,7 +149,7 @@ const DashboardScreen = () => {
         }}
         width={Dimensions.get('window').width}
         height={220}
-        yAxisLabel={'$'}
+        yAxisLabel={'€'}
         chartConfig={{
           backgroundColor: '#e26a00',
           backgroundGradientFrom: '#fb8c00',
@@ -173,6 +190,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 10,
+  },
+  dateRangeText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginVertical: 5,
   },
 });
 
