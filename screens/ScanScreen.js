@@ -8,8 +8,8 @@ import { db, auth } from '../firebase';
 const ScanScreen = ({ route, navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [recognizedText, setRecognizedText] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [companyAddress, setCompanyAddress] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
@@ -78,36 +78,36 @@ const ScanScreen = ({ route, navigation }) => {
 
       setRecognizedText(detectedText);
 
-      const nameIndex = detectedText.toLowerCase().indexOf('name');
+      const nameIndex = detectedText.toLowerCase().indexOf('Customer Name');
       if (nameIndex !== -1) {
-        const startName = nameIndex + 'name'.length;
+        const startName = nameIndex + 'Customer Name'.length;
         const nameValue = detectedText.substring(startName).split('\n')[0].trim();
-        setCompanyName(nameValue);
+        setCustomerName(nameValue);
       }
-      const addressIndex = detectedText.toLowerCase().indexOf('address');
+      const addressIndex = detectedText.toLowerCase().indexOf('Customer address');
       if (addressIndex !== -1) {
-        const startAddress = addressIndex + 'address'.length;
+        const startAddress = addressIndex + 'Customer address'.length;
         const addressValue = detectedText.substring(startAddress).split('\n')[0].trim();
-        setCompanyAddress(addressValue);
+        setCustomerAddress(addressValue);
       }
 
-      const phoneIndex = detectedText.toLowerCase().indexOf('phone');
+      const phoneIndex = detectedText.toLowerCase().indexOf('Phone Number');
       if (phoneIndex !== -1) {
-        const startPhone = phoneIndex + 'phone'.length;
+        const startPhone = phoneIndex + 'Phone Number'.length;
         const phoneValue = detectedText.substring(startPhone).split('\n')[0].trim();
         setPhoneNumber(phoneValue);
       }
 
-      const productNameIndex = detectedText.toLowerCase().indexOf('product name');
+      const productNameIndex = detectedText.toLowerCase().indexOf('Product name');
       if (productNameIndex !== -1) {
-        const startProductName = productNameIndex + 'product name'.length;
+        const startProductName = productNameIndex + 'Product name'.length;
         const productNameValue = detectedText.substring(startProductName).split('\n')[0].trim();
         setProductName(productNameValue);
       }
 
-      const quantityIndex = detectedText.toLowerCase().indexOf('quantity');
+      const quantityIndex = detectedText.toLowerCase().indexOf('Quantity');
       if (quantityIndex !== -1) {
-        const startQuantity = quantityIndex + 'quantity'.length;
+        const startQuantity = quantityIndex + 'Quantity'.length;
         const quantityValue = detectedText.substring(startQuantity).split('\n')[0].trim();
         setQuantity(quantityValue);
       }
@@ -180,7 +180,7 @@ const ScanScreen = ({ route, navigation }) => {
         return;
       }
   
-      if (!companyName || !companyAddress || !productName || !quantity || !price || !phoneNumber || !total || !invoiceNumber) {
+      if (!customerName || !customerAddress || !productName || !quantity || !price || !phoneNumber || !total || !invoiceNumber) {
         alert('Please fill in all the required fields.');
         return;
       }
@@ -194,8 +194,8 @@ const ScanScreen = ({ route, navigation }) => {
       const invoiceData = {
         userId,
         companyID,
-        companyName,
-        companyAddress,
+        customerName,
+        customerAddress,
         productName,
         quantity,
         price,
@@ -221,15 +221,15 @@ const ScanScreen = ({ route, navigation }) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Company Name"
-          value={companyName}
-          onChangeText={(text) => setCompanyName(text)}
+          placeholder="Customer Name"
+          value={customerName}
+          onChangeText={(text) => setCustomerName(text)}
         />
         <TextInput
           style={styles.input}
-          placeholder="Company Address"
-          value={companyAddress}
-          onChangeText={(text) => setCompanyAddress(text)}
+          placeholder="Customer Address"
+          value={customerAddress}
+          onChangeText={(text) => setCustomerAddress(text)}
         />
         <TextInput
           style={styles.input}

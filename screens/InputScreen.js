@@ -170,7 +170,6 @@ export function InputScreen({ navigation }) {
         return;
       }
 
-      // Fetch the user document to get the company ID
       const userDoc = await db.collection('users').doc(currentUser.uid).get();
       const companyId = userDoc.exists ? userDoc.data()?.companyID : null;
 
@@ -197,7 +196,6 @@ export function InputScreen({ navigation }) {
         return;
       }
 
-      // Get the customer ID linked to the selected customer name
       const customerId = selectedCustomer.id;
 
       const selectedProduct = productData.find((product) =>
@@ -213,7 +211,7 @@ export function InputScreen({ navigation }) {
 
       const productDetails = {
         invoiceNumber: generatedInvoiceNumber,
-        companyId, // Save the company ID
+        companyId, 
         customerId,
         customerName,
         customerAddress,
