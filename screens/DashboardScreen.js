@@ -48,7 +48,7 @@ const DashboardScreen = () => {
       const invoicesRef = db.collection('invoices');
 
       const querySnapshot = await invoicesRef.where('companyID', '==', userCompanyID).get();
-      
+
       console.log('Query Snapshot:', querySnapshot);
 
       if (querySnapshot.empty) {
@@ -59,6 +59,7 @@ const DashboardScreen = () => {
 
       const salesDataMap = new Map();
       const dateLabelsArray = [];
+      let tempTotalSales = 0;
 
       querySnapshot.forEach((doc) => {
         try {
@@ -73,13 +74,11 @@ const DashboardScreen = () => {
             dateLabelsArray.push(formattedDateString);
           }
 
-          setTotalSales((prevTotalSales) => prevTotalSales + amount);
+          tempTotalSales += amount;
         } catch (dateError) {
           console.error('Error parsing date:', dateError.message);
         }
       });
-
-      const salesDataArray = dateLabelsArray.map((date) => salesDataMap.get(date) || 0);
 
       const sortedDateLabels = dateLabelsArray.sort((a, b) => {
         const dateA = new Date(a);
@@ -87,9 +86,12 @@ const DashboardScreen = () => {
         return dateA - dateB;
       });
 
-      console.log('Total Sales:', totalSales);
+      const salesDataArray = sortedDateLabels.map((date) => salesDataMap.get(date) || 0);
+
+      console.log('Total Sales:', tempTotalSales);
       console.log('Date Labels:', sortedDateLabels);
 
+      setTotalSales(tempTotalSales);
       setSalesData(salesDataArray);
       setDateLabels(sortedDateLabels);
       setLoading(false);
@@ -135,7 +137,7 @@ const DashboardScreen = () => {
   console.log('Rendered successfully');
 
   return (
-    <View>
+    <View style={styles.container}>
       <Text style={styles.totalSalesText}>Total Sales: €{totalSales.toFixed(2)}</Text>
       <Text style={styles.dateRangeText}>{`From: ${fromDate} To: ${toDate}`}</Text>
       <LineChart
@@ -172,6 +174,12 @@ const DashboardScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'column', 
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -193,11 +201,12 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   dateRangeText: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    marginVertical: 5,
+    marginVertical: 10,
+    borderColor: 'red', 
+    borderWidth: 1, 
   },
 });
 
 export default DashboardScreen;
-
