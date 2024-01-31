@@ -183,9 +183,9 @@ export function InputScreen({ navigation }) {
       }
   
       const userDoc = await db.collection('users').doc(currentUser.uid).get();
-      const companyId = userDoc.exists ? userDoc.data()?.companyID : null;
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
   
-      if (!companyId) {
+      if (!companyID) {
         alert('Company ID not found for the current user');
         return;
       }
@@ -271,7 +271,7 @@ export function InputScreen({ navigation }) {
       const customerId = selectedCustomer.id;
       const productDetails = {
         invoiceNumber: generatedInvoiceNumber,
-        companyId,
+        companyID,
         customerId,
         customerName,
         customerAddress,

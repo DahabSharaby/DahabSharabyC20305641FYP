@@ -46,8 +46,9 @@ const DashboardScreen = () => {
       console.log('User Company ID:', userCompanyID);
 
       const invoicesRef = db.collection('invoices');
-      const querySnapshot = await invoicesRef.where('companyId', '==', userCompanyID).get();
 
+      const querySnapshot = await invoicesRef.where('companyID', '==', userCompanyID).get();
+      
       console.log('Query Snapshot:', querySnapshot);
 
       if (querySnapshot.empty) {
