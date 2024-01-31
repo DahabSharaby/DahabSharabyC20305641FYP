@@ -17,9 +17,9 @@ const AdminScreen = () => {
         <Text style={styles.buttonText}>Add Product</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DeleteAccount')}>
+      {/* <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DeleteAccount')}>
         <Text style={styles.buttonText}>Delete Account</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 };

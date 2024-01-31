@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebase';
 
@@ -31,6 +31,7 @@ export function InputScreen({ navigation }) {
           const productDetails = {
             id: doc.id,
             name: doc.data().productName,
+            price: doc.data().productPrice,
           };
           data.push(productDetails);
         });
@@ -76,6 +77,8 @@ export function InputScreen({ navigation }) {
           const customerDetails = {
             id: doc.id,
             name: doc.data().customerName,
+            address: doc.data().customerAddress,
+            phoneNumber: doc.data().phoneNumber,
           };
           data.push(customerDetails);
         });
@@ -105,25 +108,36 @@ export function InputScreen({ navigation }) {
   }, [customerName, customerData]);
 
   const renderProductItem = ({ item }) => (
-    <TouchableOpacity onPress={() => handleProductSelection(item.name)}>
+    <TouchableOpacity onPress={() => handleProductSelection(item)}>
       <Text style={styles.suggestedProductItem}>{item.name}</Text>
     </TouchableOpacity>
   );
 
-  const handleProductSelection = (selectedProduct) => {
-    setProductName(selectedProduct);
-    setSuggestedProducts([]);
+  const handleProductSelection = async (selectedProduct) => {
+    try {
+      setProductName(selectedProduct.name);
+      setPrice(selectedProduct.price);
+      setSuggestedProducts([]);
+    } catch (error) {
+      console.error('Error fetching product details:', error);
+    }
   };
 
   const renderCustomerItem = ({ item }) => (
-    <TouchableOpacity onPress={() => handleCustomerSelection(item.name)}>
+    <TouchableOpacity onPress={() => handleCustomerSelection(item)}>
       <Text style={styles.suggestedCustomersItem}>{item.name}</Text>
     </TouchableOpacity>
   );
 
-  const handleCustomerSelection = (selectedCustomer) => {
-    setCustomerName(selectedCustomer);
-    setSuggestedCustomer([]);
+  const handleCustomerSelection = async (selectedCustomer) => {
+    try {
+      setCustomerName(selectedCustomer.name);
+      setCustomerAddress(selectedCustomer.address);
+      setPhoneNumber(selectedCustomer.phoneNumber);
+      setSuggestedCustomer([]);
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+    }
   };
 
   const generateInvoiceNumber = () => {
@@ -146,8 +160,6 @@ export function InputScreen({ navigation }) {
 
   const handleSaveInvoice = async () => {
     try {
-      console.log('Current User:', currentUser);
-
       if (
         customerName.trim() === '' ||
         customerAddress.trim() === '' ||
@@ -159,59 +171,107 @@ export function InputScreen({ navigation }) {
         alert('Please fill in all fields');
         return;
       }
-
+  
       if (new Date(date) > new Date()) {
         alert('Date cannot be in the future');
         return;
       }
-
+  
       if (!currentUser) {
         alert('User not logged in');
         return;
       }
-
+  
       const userDoc = await db.collection('users').doc(currentUser.uid).get();
       const companyId = userDoc.exists ? userDoc.data()?.companyID : null;
-
-    if (!companyId) {
-      alert('Company ID not found for the current user');
-      return;
-    }
+  
+      if (!companyId) {
+        alert('Company ID not found for the current user');
+        return;
+      }
       const generatedInvoiceNumber = generateInvoiceNumber();
       setInvoiceNumber(generatedInvoiceNumber);
-
+  
       if (!productData || productData.length === 0) {
         alert('Product data not available');
         return;
       }
-
-      const selectedCustomer = customerData.find((customer) =>
-        customer &&
-        customer.name &&
-        customer.name.toLowerCase() === customerName.toLowerCase()
+  
+      const selectedCustomer = customerData.find(
+        (customer) =>
+          customer &&
+          customer.name &&
+          customer.name.toLowerCase() === customerName.toLowerCase()
       );
-
+  
+      const selectedProduct = productData.find(
+        (product) =>
+          product &&
+          product.name &&
+          product.name.toLowerCase() === productName.toLowerCase()
+      );
+  
+      if (!selectedCustomer && !selectedProduct) {
+        Alert.alert(
+          'Customer and Product Not Found',
+          'The selected customer and product are not in the system. Do you want to add them?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Add Customer and Product',
+              onPress: () => navigation.navigate('Admin'),
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+  
       if (!selectedCustomer) {
-        alert('Selected customer not found');
+        Alert.alert(
+          'Customer Not Found',
+          'This customer is not in the system. Do you want to add the customer?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Add Customer',
+              onPress: () => navigation.navigate('Customer'),
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+  
+      if (!selectedProduct) {
+        Alert.alert(
+          'Product Not Found',
+          'This product is not in the system. Do you want to add the product?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Add Product',
+              onPress: () => navigation.navigate('Product'),
+            },
+          ],
+          { cancelable: false }
+        );
         return;
       }
 
       const customerId = selectedCustomer.id;
-
-      const selectedProduct = productData.find((product) =>
-        product &&
-        product.name &&
-        product.name.toLowerCase() === productName.toLowerCase()
-      );
-
-      if (!selectedProduct) {
-        alert('Selected product not found');
-        return;
-      }
-
       const productDetails = {
         invoiceNumber: generatedInvoiceNumber,
-        companyId, 
+        companyId,
         customerId,
         customerName,
         customerAddress,
@@ -224,10 +284,10 @@ export function InputScreen({ navigation }) {
         total: parseFloat(total) || 0,
         userId: currentUser.uid,
       };
-
+  
       await db.collection('invoices').add(productDetails);
       alert('Invoice details saved successfully!');
-
+  
       setCustomerName('');
       setCustomerAddress('');
       setProductName('');
@@ -242,6 +302,7 @@ export function InputScreen({ navigation }) {
       alert('Failed to save invoice details.');
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -355,10 +416,10 @@ const styles = StyleSheet.create({
     borderBottomColor: 'gray',
     borderBottomWidth: 1,
   },
-
   suggestedCustomerList: {
     width: '80%',
     marginTop: 5,
+    top: 200,
     maxHeight: 100,
     position: 'absolute',
     zIndex: 1,
