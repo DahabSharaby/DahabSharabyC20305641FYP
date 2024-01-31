@@ -167,12 +167,12 @@ const ProductScreen = () => {
         </>
       )}
 
-      <Button
+      {/* <Button
         title="Delete Product"
         onPress={deleteProduct}
         disabled={!selectedProduct}
         style={{ marginTop: 20 }}
-      />
+      /> */}
     </View>
   );
 };

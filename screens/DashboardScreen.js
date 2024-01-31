@@ -41,12 +41,12 @@ const DashboardScreen = () => {
         return;
       }
 
-      const userCompanyId = userDoc.data().companyID;
+      const userCompanyID = userDoc.data().companyID;
 
-      console.log('User Company ID:', userCompanyId);
+      console.log('User Company ID:', userCompanyID);
 
       const invoicesRef = db.collection('invoices');
-      const querySnapshot = await invoicesRef.where('companyId', '==', userCompanyId).get();
+      const querySnapshot = await invoicesRef.where('companyId', '==', userCompanyID).get();
 
       console.log('Query Snapshot:', querySnapshot);
 
@@ -199,3 +199,4 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardScreen;
+

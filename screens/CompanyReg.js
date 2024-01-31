@@ -22,10 +22,10 @@ const CompanyReg = ({ navigation }) => {
     auth.createUserWithEmailAndPassword(email, pass)
       .then((authUser) => {
         db.collection('/companies').doc(authUser.user.uid).set({
-          usersEmail: email,
-          usersPassword: pass,
-          usersName: CompanyName,
-          usersNumber: num,
+          companyEmail: email,
+          companyPassword: pass,
+          companyName: CompanyName,
+          companyNumber: num,
           companyID: companyID,
         });
 
