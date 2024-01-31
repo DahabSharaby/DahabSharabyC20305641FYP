@@ -77,37 +77,37 @@ const ScanScreen = ({ route, navigation }) => {
       const detectedText = apiResponse.data.responses[0].fullTextAnnotation.text;
 
       setRecognizedText(detectedText);
-
-      const nameIndex = detectedText.toLowerCase().indexOf('Customer Name');
+      
+      const nameIndex = detectedText.toLowerCase().indexOf('name');
       if (nameIndex !== -1) {
-        const startName = nameIndex + 'Customer Name'.length;
+        const startName = nameIndex + 'name'.length;
         const nameValue = detectedText.substring(startName).split('\n')[0].trim();
         setCustomerName(nameValue);
       }
-      const addressIndex = detectedText.toLowerCase().indexOf('Customer address');
+      const addressIndex = detectedText.toLowerCase().indexOf('address');
       if (addressIndex !== -1) {
-        const startAddress = addressIndex + 'Customer address'.length;
+        const startAddress = addressIndex + 'address'.length;
         const addressValue = detectedText.substring(startAddress).split('\n')[0].trim();
         setCustomerAddress(addressValue);
       }
 
-      const phoneIndex = detectedText.toLowerCase().indexOf('Phone Number');
+      const phoneIndex = detectedText.toLowerCase().indexOf('phone');
       if (phoneIndex !== -1) {
-        const startPhone = phoneIndex + 'Phone Number'.length;
+        const startPhone = phoneIndex + 'phone'.length;
         const phoneValue = detectedText.substring(startPhone).split('\n')[0].trim();
         setPhoneNumber(phoneValue);
       }
 
-      const productNameIndex = detectedText.toLowerCase().indexOf('Product name');
+      const productNameIndex = detectedText.toLowerCase().indexOf('product name');
       if (productNameIndex !== -1) {
-        const startProductName = productNameIndex + 'Product name'.length;
+        const startProductName = productNameIndex + 'product name'.length;
         const productNameValue = detectedText.substring(startProductName).split('\n')[0].trim();
         setProductName(productNameValue);
       }
 
-      const quantityIndex = detectedText.toLowerCase().indexOf('Quantity');
+      const quantityIndex = detectedText.toLowerCase().indexOf('quantity');
       if (quantityIndex !== -1) {
-        const startQuantity = quantityIndex + 'Quantity'.length;
+        const startQuantity = quantityIndex + 'quantity'.length;
         const quantityValue = detectedText.substring(startQuantity).split('\n')[0].trim();
         setQuantity(quantityValue);
       }
