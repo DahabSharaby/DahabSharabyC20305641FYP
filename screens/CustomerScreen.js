@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 
 export default function CustomerScreen() {
   const [customerName, setCustomerName] = useState('');
@@ -21,61 +21,83 @@ export default function CustomerScreen() {
     return () => unsubscribe();
   }, []);
 
-  const addCustomer = () => {
-    db.collection('customers').add({
-      customerName,
-      customerAddress,
-      phoneNumber,
-    });
+  const getCurrentUserCompanyID = async () => {
+    try {
+      const currentUser = auth.currentUser;
 
-    setCustomerName('');
-    setCustomerAddress('');
-    setPhoneNumber('');
+      if (currentUser) {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          return userData.companyID; 
+        } else {
+          console.error('User document not found.');
+          return null;
+        }
+      } else {
+        console.error('User not authenticated.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting user company ID:', error);
+      return null;
+    }
   };
 
-  const editCustomer = () => {
-    if (!selectedCustomer) {
-      Alert.alert('Select a customer to edit');
-      return;
+  const addCustomer = async () => {
+    try {
+      const companyID = await getCurrentUserCompanyID();
+      await db.collection('customers').add({
+        companyID,
+        customerName,
+        customerAddress,
+        phoneNumber,
+      });
+
+      setCustomerName('');
+      setCustomerAddress('');
+      setPhoneNumber('');
+    } catch (error) {
+      console.error('Error adding customer:', error);
     }
-
-    db.collection('customers').doc(selectedCustomer.id).update({
-      customerName,
-      customerAddress,
-      phoneNumber,
-    });
-
-    setCustomerName('');
-    setCustomerAddress('');
-    setPhoneNumber('');
-    setSelectedCustomer(null);
   };
 
-  const removeCustomer = () => {
-    if (!selectedCustomer) {
-      Alert.alert('Select a customer to delete');
-      return;
-    }
+  const editCustomer = async () => {
+    try {
+      if (!selectedCustomer) {
+        Alert.alert('Select a customer to edit');
+        return;
+      }
 
-    Alert.alert(
-      'Confirm Delete',
-      `Are you sure you want to delete ${selectedCustomer.customerName}?`,
-      [
-        {
-          text: 'Cancel',
-          onPress: () => {},
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: () => {
-            db.collection('customers').doc(selectedCustomer.id).delete();
-            setSelectedCustomer(null);
-          },
-          style: 'destructive',
-        },
-      ]
-    );
+      const companyID = await getCurrentUserCompanyID();
+      await db.collection('customers').doc(selectedCustomer.id).update({
+        companyID,
+        customerName: customerName || selectedCustomer.customerName,
+        customerAddress: customerAddress || selectedCustomer.customerAddress,
+        phoneNumber: phoneNumber || selectedCustomer.phoneNumber,
+      });
+
+      setCustomerName('');
+      setCustomerAddress('');
+      setPhoneNumber('');
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('Error editing customer:', error);
+    }
+  };
+
+  const removeCustomer = async () => {
+    try {
+      if (!selectedCustomer) {
+        Alert.alert('Select a customer to delete');
+        return;
+      }
+
+      await db.collection('customers').doc(selectedCustomer.id).delete();
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+    }
   };
 
   return (
@@ -84,17 +106,17 @@ export default function CustomerScreen() {
       <TextInput
         placeholder="Customer Name"
         value={customerName}
-        onChangeText={setCustomerName}
+        onChangeText={(text) => setCustomerName(text)}
       />
       <TextInput
         placeholder="Customer Address"
         value={customerAddress}
-        onChangeText={setCustomerAddress}
+        onChangeText={(text) => setCustomerAddress(text)}
       />
       <TextInput
         placeholder="Phone Number"
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        onChangeText={(text) => setPhoneNumber(text)}
       />
       <Button title="Add Customer" onPress={addCustomer} />
 
@@ -115,18 +137,18 @@ export default function CustomerScreen() {
           <Text style={{ marginTop: 20 }}>Edit Customer:</Text>
           <TextInput
             placeholder="Customer Name"
-            value={customerName}
-            onChangeText={setCustomerName}
+            value={customerName || selectedCustomer.customerName}
+            onChangeText={(text) => setCustomerName(text)}
           />
           <TextInput
             placeholder="Customer Address"
-            value={customerAddress}
-            onChangeText={setCustomerAddress}
+            value={customerAddress || selectedCustomer.customerAddress}
+            onChangeText={(text) => setCustomerAddress(text)}
           />
           <TextInput
             placeholder="Phone Number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
+            value={phoneNumber || selectedCustomer.phoneNumber}
+            onChangeText={(text) => setPhoneNumber(text)}
           />
           <Button title="Save Changes" onPress={editCustomer} />
         </>

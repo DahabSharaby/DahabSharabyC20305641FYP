@@ -14,6 +14,7 @@ import DeleteAccountScreen from './screens/DeleteAccountScreen.js';
 import CustomerScreen from './screens/CustomerScreen.js';
 import ProductScreen from './screens/ProductScreen.js';
 import CompanyReg from './screens/CompanyReg.js';
+import ScanScreen from './screens/ScanScreen.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,8 @@ export default function App() {
       <Stack.Screen name="Customer" component={CustomerScreen} />
       <Stack.Screen name="Product" component={ProductScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="ScanScreen" component={ScanScreen} />
+
       </Stack.Navigator>
       
       </NavigationContainer>

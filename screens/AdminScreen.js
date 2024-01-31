@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Button } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const AdminScreen = () => {
@@ -7,24 +7,22 @@ const AdminScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text>AdminScreen</Text>
-      <Button
-        title="Add Customer"
-        onPress={() => navigation.navigate('Customer')}
-      />
-      <Button
-        title="Add Product"
-        onPress={() => navigation.navigate('Product')}
-      />
-      <Button
-        title="Delete Account"
-        onPress={() => navigation.navigate('DeleteAccount')}
-      />
+      <Text style={styles.title}>Admin Screen</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Customer')}>
+        <Text style={styles.buttonText}>Add Customer</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Product')}>
+        <Text style={styles.buttonText}>Add Product</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DeleteAccount')}>
+        <Text style={styles.buttonText}>Delete Account</Text>
+      </TouchableOpacity>
     </View>
   );
 };
-
-export default AdminScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -32,4 +30,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 5,
+    marginVertical: 10,
+    width: '80%',
+    //alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });
+
+export default AdminScreen;
