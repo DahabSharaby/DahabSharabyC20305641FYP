@@ -8,8 +8,8 @@ import { db, auth } from '../firebase';
 const ScanScreen = ({ route, navigation }) => {
   const [imageUri, setImageUri] = useState(null);
   const [recognizedText, setRecognizedText] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [companyAddress, setCompanyAddress] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [productName, setProductName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
@@ -77,18 +77,18 @@ const ScanScreen = ({ route, navigation }) => {
       const detectedText = apiResponse.data.responses[0].fullTextAnnotation.text;
 
       setRecognizedText(detectedText);
-
+      
       const nameIndex = detectedText.toLowerCase().indexOf('name');
       if (nameIndex !== -1) {
         const startName = nameIndex + 'name'.length;
         const nameValue = detectedText.substring(startName).split('\n')[0].trim();
-        setCompanyName(nameValue);
+        setCustomerName(nameValue);
       }
       const addressIndex = detectedText.toLowerCase().indexOf('address');
       if (addressIndex !== -1) {
         const startAddress = addressIndex + 'address'.length;
         const addressValue = detectedText.substring(startAddress).split('\n')[0].trim();
-        setCompanyAddress(addressValue);
+        setCustomerAddress(addressValue);
       }
 
       const phoneIndex = detectedText.toLowerCase().indexOf('phone');
@@ -180,7 +180,7 @@ const ScanScreen = ({ route, navigation }) => {
         return;
       }
   
-      if (!companyName || !companyAddress || !productName || !quantity || !price || !phoneNumber || !total || !invoiceNumber) {
+      if (!customerName || !customerAddress || !productName || !quantity || !price || !phoneNumber || !total || !invoiceNumber) {
         alert('Please fill in all the required fields.');
         return;
       }
@@ -194,8 +194,8 @@ const ScanScreen = ({ route, navigation }) => {
       const invoiceData = {
         userId,
         companyID,
-        companyName,
-        companyAddress,
+        customerName,
+        customerAddress,
         productName,
         quantity,
         price,
@@ -221,15 +221,15 @@ const ScanScreen = ({ route, navigation }) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Company Name"
-          value={companyName}
-          onChangeText={(text) => setCompanyName(text)}
+          placeholder="Customer Name"
+          value={customerName}
+          onChangeText={(text) => setCustomerName(text)}
         />
         <TextInput
           style={styles.input}
-          placeholder="Company Address"
-          value={companyAddress}
-          onChangeText={(text) => setCompanyAddress(text)}
+          placeholder="Customer Address"
+          value={customerAddress}
+          onChangeText={(text) => setCustomerAddress(text)}
         />
         <TextInput
           style={styles.input}
