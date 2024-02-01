@@ -135,13 +135,13 @@ export default function CustomerScreen() {
         data={customers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-            <Text>{`${item.customerName} - ${item.customerAddress} - ${item.phoneNumber} - ${item.email}`}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 17 }}>
+            <Text>{`${item.customerName}  - ${item.email}`}</Text>
             <Button title="Edit" onPress={() => setSelectedCustomer(item)} />
           </View>
         )}
       />
-
+{/* - ${item.customerAddress} - ${item.phoneNumber} */}
       {selectedCustomer && (
         <>
           <Text style={{ marginTop: 20 }}>Edit Customer:</Text>

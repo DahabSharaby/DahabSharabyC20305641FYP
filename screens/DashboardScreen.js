@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 10,
     borderColor: 'red', 
-    borderWidth: 1, 
+    borderWidth: 2, 
   },
 });
 
