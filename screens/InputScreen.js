@@ -1,24 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { Text, View, TextInput, Button, StyleSheet, TouchableOpacity, FlatList, Alert, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db, auth } from '../firebase';
 
 export function InputScreen({ navigation }) {
   const [productData, setProductData] = useState([]);
+  const [products, setProducts] = useState([]);
   const [customerData, setCustomerData] = useState([]);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [productName, setProductName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [total, setTotal] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [suggestedProducts, setSuggestedProducts] = useState([]);
-  const [suggestedCustomer, setSuggestedCustomer] = useState([]);
+  const [suggestedCustomers, setSuggestedCustomers] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const collectionRef = db.collection('customers');
+        const querySnapshot = await collectionRef.get();
+
+        const data = [];
+        querySnapshot.forEach((doc) => {
+          const customerDetails = {
+            id: doc.id,
+            name: doc.data().customerName,
+            address: doc.data().customerAddress,
+            phoneNumber: doc.data().phoneNumber,
+          };
+          data.push(customerDetails);
+        });
+
+        setCustomerData(data);
+        console.log('Fetched customers:', data);
+      } catch (error) {
+        console.error('Firestore Error:', error);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  const handleCustomerNameChange = (text) => {
+    setCustomerName(text);
+
+    if (text.length > 0) {
+      const filteredCustomers = customerData.filter((customer) =>
+        customer.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setSuggestedCustomers(filteredCustomers);
+    } else {
+      setSuggestedCustomers([]);
+    }
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -36,7 +74,8 @@ export function InputScreen({ navigation }) {
           data.push(productDetails);
         });
 
-        setProductData(data);
+        setSuggestedProducts(data);
+        console.log('Fetched products:', data);
       } catch (error) {
         console.error('Firestore Error:', error);
       }
@@ -46,82 +85,128 @@ export function InputScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    if (productName.trim() !== '') {
-      const filteredProducts = productData.filter(
-        (product) => product.name.toLowerCase().includes(productName.toLowerCase())
-      );
-      setSuggestedProducts(filteredProducts);
-    } else {
-      setSuggestedProducts([]);
-    }
-  }, [productName, productData]);
-
-  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
-      console.log('Current User:', user);
     });
     return () => {
       unsubscribe();
     };
   }, []);
 
-  useEffect(() => {
-    const fetchCustomer = async () => {
-      try {
-        const collectionRef = db.collection('customers');
-        const querySnapshot = await collectionRef.get();
+  const handleOpenModal = () => {
+    setModalVisible(true);
+  };
 
-        const data = [];
-        querySnapshot.forEach((doc) => {
-          const customerDetails = {
-            id: doc.id,
-            name: doc.data().customerName,
-            address: doc.data().customerAddress,
-            phoneNumber: doc.data().phoneNumber,
-          };
-          data.push(customerDetails);
-        });
+  const handleCloseModal = () => {
+    setModalVisible(false);
+  };
 
-        setCustomerData(data);
-      } catch (error) {
-        console.error('Firestore Error:', error);
+  const handleAddProduct = () => {
+    setModalVisible(true);
+  };
+
+  
+  const handleProductSelection = (product) => {
+    const newProduct = { ...product, quantity: '1' }; 
+    setProducts([...products, newProduct]);
+    setModalVisible(false);
+  };
+
+  const generateInvoiceNumber = () => {
+    const randomNumber = Math.floor(1000 + Math.random() * 9000);
+    return `INV${randomNumber}`;
+  };
+
+  const handleSaveInvoice = async () => {
+    try {
+      // Check if customer details are filled
+      if (
+        customerName.trim() === '' ||
+        customerAddress.trim() === '' ||
+        phoneNumber.trim() === ''
+      ) {
+        Alert.alert('Please fill in all customer details');
+        return;
       }
-    };
 
-    fetchCustomer();
-  }, []);
+      // Check if products are added
+      if (products.length === 0) {
+        Alert.alert('Please add products to the invoice');
+        return;
+      }
 
-  useEffect(() => {
-    if (customerName.trim() !== '') {
-      const filteredCustomer = customerData.filter((customer) => {
-        return (
-          customer &&
-          customer.name &&
-          customer.name.toLowerCase().includes(customerName.toLowerCase())
-        );
+      const totalAmount = products.reduce(
+        (total, product) => total + product.price * product.quantity,
+        0
+      );
+
+      const userDoc = await db.collection('users').doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        Alert.alert('Company ID not found for the current user');
+        return;
+      }
+
+      const generatedInvoiceNumber = generateInvoiceNumber();
+
+      const invoiceData = {
+        invoiceNumber: generatedInvoiceNumber,
+        companyID,
+        customerName,
+        customerAddress,
+        phoneNumber: parseFloat(phoneNumber),
+        date: selectedDate,
+        totalAmount: parseFloat(totalAmount.toFixed(2)), // Ensure total amount is rounded to 2 decimal places
+      };
+
+      await db.collection('invoices').doc(generatedInvoiceNumber).set(invoiceData);
+
+      products.forEach(async (product) => {
+        await db.collection('invoices').doc(generatedInvoiceNumber).collection('products').add({
+          productName: product.name,
+          productPrice: parseFloat(product.price),
+          quantity: parseFloat(product.quantity),
+        });
       });
-      setSuggestedCustomer(filteredCustomer);
-    } else {
-      setSuggestedCustomer([]);
+
+      setCustomerName('');
+      setCustomerAddress('');
+      setPhoneNumber('');
+      setDate(new Date());
+      setProducts([]);
+
+      Alert.alert('Invoice details saved successfully!');
+      console.log('Invoice details saved:', invoiceData);
+    } catch (error) {
+      console.error('Error saving to Firebase:', error);
+      Alert.alert('Failed to save invoice details.');
     }
-  }, [customerName, customerData]);
+  };
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleProductSelection(item)}>
-      <Text style={styles.suggestedProductItem}>{item.name}</Text>
+      <View style={styles.productContainer}>
+        <Text>{item.name}</Text>
+        <Text>{item.price}</Text>
+        <TextInput
+          placeholder="Quantity"
+          onChangeText={(text) => {
+            const newProducts = products.map((p) =>
+              p.id === item.id ? { ...p, quantity: text } : p
+            );
+            setProducts(newProducts);
+          }}
+          keyboardType="numeric"
+          style={styles.quantityInput}
+        />
+        <Button
+          title="Add"
+          onPress={() => handleProductSelection(item)}
+        />
+      </View>
     </TouchableOpacity>
   );
-
-  const handleProductSelection = async (selectedProduct) => {
-    try {
-      setProductName(selectedProduct.name);
-      setPrice(selectedProduct.price);
-      setSuggestedProducts([]);
-    } catch (error) {
-      console.error('Error fetching product details:', error);
-    }
-  };
 
   const renderCustomerItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleCustomerSelection(item)}>
@@ -134,186 +219,59 @@ export function InputScreen({ navigation }) {
       setCustomerName(selectedCustomer.name);
       setCustomerAddress(selectedCustomer.address);
       setPhoneNumber(selectedCustomer.phoneNumber);
-      setSuggestedCustomer([]);
+      setSuggestedCustomers([]);
     } catch (error) {
       console.error('Error fetching customer details:', error);
     }
   };
 
-  const generateInvoiceNumber = () => {
-    const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    return `INV${randomNumber}`;
+  const handleDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(false);
+    setSelectedDate(currentDate);
   };
-
-  const calculateTotal = () => {
-    if (quantity && price) {
-      const calculatedTotal = (parseFloat(quantity) * parseFloat(price)).toFixed(2);
-      setTotal(calculatedTotal);
-    } else {
-      setTotal('');
-    }
-  };
-
-  const handleCalculatePress = () => {
-    calculateTotal();
-  };
-
-  const handleSaveInvoice = async () => {
-    try {
-      if (
-        customerName.trim() === '' ||
-        customerAddress.trim() === '' ||
-        productName.trim() === '' ||
-        quantity.trim() === '' ||
-        price.trim() === '' ||
-        phoneNumber.trim() === ''
-      ) {
-        alert('Please fill in all fields');
-        return;
-      }
-  
-      if (new Date(date) > new Date()) {
-        alert('Date cannot be in the future');
-        return;
-      }
-  
-      if (!currentUser) {
-        alert('User not logged in');
-        return;
-      }
-  
-      const userDoc = await db.collection('users').doc(currentUser.uid).get();
-      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
-  
-      if (!companyID) {
-        alert('Company ID not found for the current user');
-        return;
-      }
-      const generatedInvoiceNumber = generateInvoiceNumber();
-      setInvoiceNumber(generatedInvoiceNumber);
-  
-      if (!productData || productData.length === 0) {
-        alert('Product data not available');
-        return;
-      }
-  
-      const selectedCustomer = customerData.find(
-        (customer) =>
-          customer &&
-          customer.name &&
-          customer.name.toLowerCase() === customerName.toLowerCase()
-      );
-  
-      const selectedProduct = productData.find(
-        (product) =>
-          product &&
-          product.name &&
-          product.name.toLowerCase() === productName.toLowerCase()
-      );
-  
-      if (!selectedCustomer && !selectedProduct) {
-        Alert.alert(
-          'Customer and Product Not Found',
-          'The selected customer and product are not in the system. Do you want to add them?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Add Customer and Product',
-              onPress: () => navigation.navigate('Admin'),
-            },
-          ],
-          { cancelable: false }
-        );
-        return;
-      }
-  
-      if (!selectedCustomer) {
-        Alert.alert(
-          'Customer Not Found',
-          'This customer is not in the system. Do you want to add the customer?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Add Customer',
-              onPress: () => navigation.navigate('Customer'),
-            },
-          ],
-          { cancelable: false }
-        );
-        return;
-      }
-  
-      if (!selectedProduct) {
-        Alert.alert(
-          'Product Not Found',
-          'This product is not in the system. Do you want to add the product?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Add Product',
-              onPress: () => navigation.navigate('Product'),
-            },
-          ],
-          { cancelable: false }
-        );
-        return;
-      }
-
-      const customerId = selectedCustomer.id;
-      const productDetails = {
-        invoiceNumber: generatedInvoiceNumber,
-        companyID,
-        customerId,
-        customerName,
-        customerAddress,
-        productName,
-        productId: selectedProduct.id,
-        phoneNumber: parseFloat(phoneNumber),
-        quantity: parseFloat(quantity),
-        price: parseFloat(price),
-        date,
-        total: parseFloat(total) || 0,
-        userId: currentUser.uid,
-      };
-  
-      await db.collection('invoices').add(productDetails);
-      alert('Invoice details saved successfully!');
-  
-      setCustomerName('');
-      setCustomerAddress('');
-      setProductName('');
-      setPhoneNumber('');
-      setQuantity('');
-      setPrice('');
-      setDate(new Date());
-      setTotal('');
-      setInvoiceNumber('');
-    } catch (error) {
-      console.error('Error saving to Firebase:', error);
-      alert('Failed to save invoice details.');
-    }
-  };
-
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+        <Text>{selectedDate.toLocaleDateString()}</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="spinner"
+          onChange={handleDateChange}
+        />
+      )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <FlatList
+              data={suggestedProducts}
+              renderItem={renderProductItem}
+              keyExtractor={(item) => item.id}
+              style={styles.suggestedProductList}
+            />
+            <Button title="Close" onPress={handleCloseModal} />
+          </View>
+        </View>
+      </Modal>
+
       <TextInput
         placeholder="Customer Name"
         value={customerName}
-        onChangeText={(text) => setCustomerName(text)}
+        onChangeText={handleCustomerNameChange}
         style={styles.input}
       />
       <FlatList
-        data={suggestedCustomer}
+        data={suggestedCustomers}
         renderItem={renderCustomerItem}
         keyExtractor={(item) => item.id}
         style={styles.suggestedCustomerList}
@@ -331,58 +289,21 @@ export function InputScreen({ navigation }) {
         keyboardType="phone-pad"
         style={styles.input}
       />
-      <TextInput
-        placeholder="Product Name"
-        value={productName}
-        onChangeText={(text) => setProductName(text)}
-        style={styles.input}
-      />
+
+      {/* FlatList to display selected products with name, price, and quantity */}
       <FlatList
-        data={suggestedProducts}
-        renderItem={renderProductItem}
-        keyExtractor={(item) => item.id}
-        style={styles.suggestedProductList}
-      />
-      <TextInput
-        placeholder="Quantity"
-        value={quantity}
-        onChangeText={(text) => {
-          setQuantity(text);
-          calculateTotal();
-        }}
-        keyboardType="numeric"
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Price"
-        value={price}
-        onChangeText={(text) => {
-          setPrice(text);
-          calculateTotal();
-        }}
-        keyboardType="numeric"
-        style={styles.input}
+        data={products}
+        renderItem={({ item }) => (
+          <View style={styles.productContainer}>
+            <Text>{item.name}</Text>
+            <Text>{item.price}</Text>
+            <Text>{item.quantity}</Text>
+          </View>
+        )}
+        keyExtractor={(item, index) => index.toString()}
       />
 
-      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-        <View style={styles.input}>
-          <Text>Date: {date.toLocaleDateString()}</Text>
-        </View>
-      </TouchableOpacity>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            setDate(selectedDate || date);
-          }}
-        />
-      )}
-      <Button title="Calculate Total" onPress={handleCalculatePress} />
-      {total !== '' ? <Text>Total: €{parseFloat(total).toFixed(2)}</Text> : null}
+      <Button title="Add Product" onPress={handleAddProduct} />
       <Button title="Save Invoice" onPress={handleSaveInvoice} />
     </View>
   );
@@ -401,36 +322,52 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     padding: 10,
   },
+  quantityInput: {
+    borderWidth: 1,
+    width: '20%',
+    marginVertical: 8,
+    padding: 10,
+  },
   suggestedProductList: {
-    width: '80%',
+    width: '100%',
     marginTop: 5,
-    maxHeight: 100,
-    position: 'absolute',
-    zIndex: 1,
-    backgroundColor: 'white',
     borderColor: 'gray',
     borderWidth: 1,
-  },
-  suggestedProductItem: {
-    padding: 10,
-    borderBottomColor: 'gray',
-    borderBottomWidth: 1,
   },
   suggestedCustomerList: {
     width: '80%',
     marginTop: 5,
-    top: 200,
     maxHeight: 100,
-    position: 'absolute',
-    zIndex: 1,
-    backgroundColor: 'white',
     borderColor: 'gray',
     borderWidth: 1,
+  },
+  productContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
   },
   suggestedCustomersItem: {
     padding: 10,
     borderBottomColor: 'gray',
     borderBottomWidth: 1,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: '100%',
+    height: '100%',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    maxHeight: '80%',
   },
 });
 

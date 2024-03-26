@@ -26,6 +26,7 @@ const ScanScreen = ({ route, navigation }) => {
   const [totalStatus, setTotalStatus] = useState(false);
   const [extractionMessage, setExtractionMessage] = useState('');
   const [date, setDate] = useState(new Date());
+  const [productList, setProductList] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
@@ -66,11 +67,12 @@ const ScanScreen = ({ route, navigation }) => {
 
   const analyzeImage = async (uri) => {
     try {
-      const apiKey = 'AIzaSyBJ3FyjJzcNMApNqb7itGQBGP4wE6BO5bI';
+      const apiKey = 'AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4';
       const apiURL = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
       const base64ImageData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
+        
       });
 
       const requestData = {
@@ -79,7 +81,7 @@ const ScanScreen = ({ route, navigation }) => {
             image: {
               content: base64ImageData,
             },
-            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+            features: [{ type: 'TEXT_DETECTION' }],
           },
         ],
       };
@@ -88,29 +90,86 @@ const ScanScreen = ({ route, navigation }) => {
       const detectedText = apiResponse.data.responses[0].fullTextAnnotation.text;
 
       setRecognizedText(detectedText);
+      console.log("Response = "+detectedText)
 
-      const nameIndex = detectedText.toLowerCase().indexOf('name');
+      const nameIndex = detectedText.toLowerCase().indexOf('name -');
       if (nameIndex !== -1) {
-        const startName = nameIndex + 'name'.length;
+        const startName = nameIndex + 'name -'.length;
         const nameValue = detectedText.substring(startName).split('\n')[0].trim();
         setCustomerName(nameValue);
         setCustomerNameStatus(!!nameValue);
       }
-      const addressIndex = detectedText.toLowerCase().indexOf('address');
+      const addressIndex = detectedText.toLowerCase().indexOf('address -');
       if (addressIndex !== -1) {
-        const startAddress = addressIndex + 'address'.length;
+        const startAddress = addressIndex + 'address -'.length;
         const addressValue = detectedText.substring(startAddress).split('\n')[0].trim();
         setCustomerAddress(addressValue);
         setCustomerAddressStatus(!!addressValue);
       }
 
-      const phoneIndex = detectedText.toLowerCase().indexOf('phone');
+      const phoneIndex = detectedText.toLowerCase().indexOf('phone -');
       if (phoneIndex !== -1) {
-        const startPhone = phoneIndex + 'phone'.length;
+        const startPhone = phoneIndex + 'phone -'.length;
         const phoneValue = detectedText.substring(startPhone).split('\n')[0].trim();
         setPhoneNumber(phoneValue);
         setPhoneNumberStatus(!!phoneValue);
       }
+
+const parseList = (productValue) => {
+  console.log("Parsing product list...");
+  const parsedItems = [];
+ //parsedItems.push("Products , ")
+  console.log(parsedItems)
+  //const regex = /(?:\d+\.\s*)?(.*?),\s*(\d+),\s*(€\d+)/g; 
+  const regex = /(\w+\s*)(,?\s*)([€$£]?\d+(,\d+)*)\s*(\d+)/g;
+ // const regex = /(\w+\s*)(,\s*)([€$£]?\d+(,\d+)*)\s*(\d+)/g;
+ // const regex = /(\s*[a-zA-Z]+\s*)(,*)([€$£]*\d+)(,*)\s*(\d+)/g;
+  //const regex = /\b[1-5]\. (.+)/g;
+  ///(\s*[a-zA-Z]+\s*)(,*)([€$£]*[1-5]\.)(,*)\s*(\d+)/g;
+//.replace("€", " ").replace("£","")
+  let match;
+  while ((match = regex.exec(productValue)) !== null) { 
+    const name = match[1];
+    console.log("match 1 " ,match[1])
+    console.log("match 2 " , match[1],match[3],match[5])
+    const price = parseInt(match[3].replace(/[€$£]/g, '')) // Removing currency symbols
+    const quantity = parseInt(match[5]);
+    parsedItems.push([name, price,quantity]);
+    console.log("Processed product:", name, price, quantity);
+  }
+  console.log("Product:", parsedItems);
+  setProductList(parsedItems);
+  console.log("Product list parsed successfully:", parsedItems);
+};
+
+// const productIndex = detectedText.toLowerCase().indexOf('products');
+// console.log("in text.", productIndex );
+// if (productIndex !== -1) {
+//   console.log("Products detected in text.");
+//   const startProduct = productIndex + 'products'.length;
+//   console.log("hellooo" , startProduct)
+//   const productValue = detectedText.substring(startProduct)
+//    .split(/\d+\.\s*/) // 1. 
+//     //.split(/\n/)
+//    .map(item => item.trim())
+//    .filter(Boolean)
+//     .join(' ');
+//   console.log("Extracted product value from text:", productValue);
+//   setProductList([productValue]);
+//   console.log("Product list set:", productValue);
+//   parseList(productValue);
+// }
+
+const productIndex = detectedText.toLowerCase().indexOf('products');
+console.log("in text.", productIndex );
+if (productIndex !== -1) {
+  console.log("Products detected in text.");
+  const productValue = detectedText.split(/\n/).slice(1).join(' ');
+  console.log("Extracted product value from text:", productValue);
+  setProductList([productValue]);
+  console.log("Product list set:", productValue);
+  parseList(productValue);
+}
 
       const productNameIndex = detectedText.toLowerCase().indexOf('product name');
       if (productNameIndex !== -1) {
@@ -277,7 +336,9 @@ const ScanScreen = ({ route, navigation }) => {
             }}
           />
         </View>
-
+        
+  <Text> {productList} </Text>
+        
         <View style={styles.fieldContainer}>
           <Text style={{ color: customerAddressStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
             {customerAddressStatus ? '✓' : '✗'}
