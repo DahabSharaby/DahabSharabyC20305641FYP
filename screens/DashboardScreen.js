@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Dimensions, ActivityIndicator } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart, BarChart } from 'react-native-chart-kit';
 import { db, auth } from '../firebase';
 
 const DashboardScreen = () => {
@@ -11,6 +11,7 @@ const DashboardScreen = () => {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [productData, setProductData] = useState([]);
 
   const formattedDate = (date) => {
     const day = date.getDate().toString().padStart(2, '0');
@@ -59,7 +60,7 @@ const DashboardScreen = () => {
 
       const salesDataMap = new Map();
       const dateLabelsArray = [];
-      let tempTotalSales = 0;
+      const productMap = new Map();
 
       querySnapshot.forEach((doc) => {
         try {
@@ -74,7 +75,14 @@ const DashboardScreen = () => {
             dateLabelsArray.push(formattedDateString);
           }
 
-          tempTotalSales += amount;
+          const products = doc.data().products || []; 
+          products.forEach(product => {
+            if (productMap.has(product.name)) {
+              productMap.set(product.name, productMap.get(product.name) + product.quantity);
+            } else {
+              productMap.set(product.name, product.quantity);
+            }
+          });
         } catch (dateError) {
           console.error('Error parsing date:', dateError.message);
         }
@@ -87,6 +95,8 @@ const DashboardScreen = () => {
       });
 
       const salesDataArray = sortedDateLabels.map((date) => salesDataMap.get(date) || 0);
+
+      const tempTotalSales = salesDataArray.reduce((acc, curr) => acc + curr, 0);
 
       console.log('Total Sales:', tempTotalSales);
       console.log('Date Labels:', sortedDateLabels);
@@ -106,6 +116,8 @@ const DashboardScreen = () => {
 
       setFromDate(formattedFirstDate);
       setToDate(formattedLastDate);
+
+      setProductData([...productMap]);
     } catch (error) {
       console.error('Error fetching data:', error.message);
       setError(`Error fetching data: ${error.message}`);
@@ -169,6 +181,33 @@ const DashboardScreen = () => {
           borderRadius: 16,
         }}
       />
+      <View style={styles.barChartContainer}>
+        <BarChart
+          data={{
+            labels: productData.map(item => item[0]), 
+            datasets: [{
+              data: productData.map(item => item[1]),
+            }]
+          }}
+          width={Dimensions.get('window').width}
+          height={220}
+          yAxisLabel={'Qty'}
+          chartConfig={{
+            backgroundColor: '#FF5733',
+            backgroundGradientFrom: '#FF5733',
+            backgroundGradientTo: '#FF5733', 
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+          }}
+          style={{
+            marginVertical: 8,
+            borderRadius: 16,
+          }}
+        />
+      </View>
     </View>
   );
 };
@@ -204,8 +243,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
     marginVertical: 10,
-    borderColor: 'red', 
-    borderWidth: 2, 
+  },
+  barChartContainer: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
 });
 
