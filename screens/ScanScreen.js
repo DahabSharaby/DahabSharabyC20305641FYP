@@ -1,38 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import axios from 'axios';
-import { db, auth } from '../firebase';
-import DateTimePicker from '@react-native-community/datetimepicker';
+//AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4
+
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import React, { useState, useEffect } from "react";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import axios from "axios";
+import { db, auth } from "../firebase";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import DeleteProductButton from "../components/DeleteProductButton";
 
 const ScanScreen = ({ route, navigation }) => {
   const [imageUri, setImageUri] = useState(null);
-  const [recognizedText, setRecognizedText] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [productName, setProductName] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [total, setTotal] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [customerNameStatus, setCustomerNameStatus] = useState(false);
-  const [phoneNumberStatus, setPhoneNumberStatus] = useState(false);
-  const [customerAddressStatus, setCustomerAddressStatus] = useState(false);
-  const [productNameStatus, setProductNameStatus] = useState(false);
-  const [quantityStatus, setQuantityStatus] = useState(false);
-  const [priceStatus, setPriceStatus] = useState(false);
-  const [totalStatus, setTotalStatus] = useState(false);
-  const [extractionMessage, setExtractionMessage] = useState('');
+  const [customerName, setCustomerName] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [date, setDate] = useState(new Date());
   const [productList, setProductList] = useState([]);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customerNameStatus, setCustomerNameStatus] = useState(false);
+  const [customerAddressStatus, setCustomerAddressStatus] = useState(false);
+  const [phoneNumberStatus, setPhoneNumberStatus] = useState(false);
+  const [customerExists, setCustomerExists] = useState(true);
+  const [productExists, setProductExists] = useState(true);
 
   useEffect(() => {
-    if (route.params.source === 'camera') {
+    const generateNumber = async () => {
+      const generatedNumber = await generateInvoiceNumber();
+      setInvoiceNumber(generatedNumber);
+    };
+
+    generateNumber();
+
+    if (route.params.source === "camera") {
       takePicture();
-    } else if (route.params.source === 'gallery') {
+    } else if (route.params.source === "gallery") {
       pickImage();
     }
   }, []);
@@ -67,12 +78,11 @@ const ScanScreen = ({ route, navigation }) => {
 
   const analyzeImage = async (uri) => {
     try {
-      const apiKey = 'AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4';
+      const apiKey = "AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4";
       const apiURL = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
       const base64ImageData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
-        
       });
 
       const requestData = {
@@ -81,225 +91,202 @@ const ScanScreen = ({ route, navigation }) => {
             image: {
               content: base64ImageData,
             },
-            features: [{ type: 'TEXT_DETECTION' }],
+            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
           },
         ],
       };
 
       const apiResponse = await axios.post(apiURL, requestData);
-      const detectedText = apiResponse.data.responses[0].fullTextAnnotation.text;
+      const detectedText =
+        apiResponse.data.responses[0].fullTextAnnotation.text;
 
-      setRecognizedText(detectedText);
-      console.log("Response = "+detectedText)
-
-      const nameIndex = detectedText.toLowerCase().indexOf('name -');
+      const nameIndex = detectedText.toLowerCase().indexOf("name -");
       if (nameIndex !== -1) {
-        const startName = nameIndex + 'name -'.length;
-        const nameValue = detectedText.substring(startName).split('\n')[0].trim();
+        const startName = nameIndex + "name -".length;
+        const nameValue = detectedText
+          .substring(startName)
+          .split("\n")[0]
+          .trim();
         setCustomerName(nameValue);
         setCustomerNameStatus(!!nameValue);
+
+        // Check if customer exists in the database
+        const customerDoc = await db
+          .collection("customers")
+          .doc(nameValue)
+          .get();
+        setCustomerExists(customerDoc.exists);
       }
-      const addressIndex = detectedText.toLowerCase().indexOf('address -');
+
+      const addressIndex = detectedText.toLowerCase().indexOf("address -");
       if (addressIndex !== -1) {
-        const startAddress = addressIndex + 'address -'.length;
-        const addressValue = detectedText.substring(startAddress).split('\n')[0].trim();
+        const startAddress = addressIndex + "address -".length;
+        const addressValue = detectedText
+          .substring(startAddress)
+          .split("\n")[0]
+          .trim();
         setCustomerAddress(addressValue);
         setCustomerAddressStatus(!!addressValue);
       }
 
-      const phoneIndex = detectedText.toLowerCase().indexOf('phone -');
+      const phoneIndex = detectedText.toLowerCase().indexOf("phone -");
       if (phoneIndex !== -1) {
-        const startPhone = phoneIndex + 'phone -'.length;
-        const phoneValue = detectedText.substring(startPhone).split('\n')[0].trim();
+        const startPhone = phoneIndex + "phone -".length;
+        const phoneValue = detectedText
+          .substring(startPhone)
+          .split("\n")[0]
+          .trim();
         setPhoneNumber(phoneValue);
         setPhoneNumberStatus(!!phoneValue);
       }
 
-const parseList = (productValue) => {
-  console.log("Parsing product list...");
-  const parsedItems = [];
- //parsedItems.push("Products , ")
-  console.log(parsedItems)
-  //const regex = /(?:\d+\.\s*)?(.*?),\s*(\d+),\s*(€\d+)/g; 
-  const regex = /(\w+\s*)(,?\s*)([€$£]?\d+(,\d+)*)\s*(\d+)/g;
- // const regex = /(\w+\s*)(,\s*)([€$£]?\d+(,\d+)*)\s*(\d+)/g;
- // const regex = /(\s*[a-zA-Z]+\s*)(,*)([€$£]*\d+)(,*)\s*(\d+)/g;
-  //const regex = /\b[1-5]\. (.+)/g;
-  ///(\s*[a-zA-Z]+\s*)(,*)([€$£]*[1-5]\.)(,*)\s*(\d+)/g;
-//.replace("€", " ").replace("£","")
-  let match;
-  while ((match = regex.exec(productValue)) !== null) { 
-    const name = match[1];
-    console.log("match 1 " ,match[1])
-    console.log("match 2 " , match[1],match[3],match[5])
-    const price = parseInt(match[3].replace(/[€$£]/g, '')) // Removing currency symbols
-    const quantity = parseInt(match[5]);
-    parsedItems.push([name, price,quantity]);
-    console.log("Processed product:", name, price, quantity);
-  }
-  console.log("Product:", parsedItems);
-  setProductList(parsedItems);
-  console.log("Product list parsed successfully:", parsedItems);
-};
+      const items = parseHandwrittenList(detectedText);
+      setProductList(items);
 
-// const productIndex = detectedText.toLowerCase().indexOf('products');
-// console.log("in text.", productIndex );
-// if (productIndex !== -1) {
-//   console.log("Products detected in text.");
-//   const startProduct = productIndex + 'products'.length;
-//   console.log("hellooo" , startProduct)
-//   const productValue = detectedText.substring(startProduct)
-//    .split(/\d+\.\s*/) // 1. 
-//     //.split(/\n/)
-//    .map(item => item.trim())
-//    .filter(Boolean)
-//     .join(' ');
-//   console.log("Extracted product value from text:", productValue);
-//   setProductList([productValue]);
-//   console.log("Product list set:", productValue);
-//   parseList(productValue);
-// }
-
-const productIndex = detectedText.toLowerCase().indexOf('products');
-console.log("in text.", productIndex );
-if (productIndex !== -1) {
-  console.log("Products detected in text.");
-  const productValue = detectedText.split(/\n/).slice(1).join(' ');
-  console.log("Extracted product value from text:", productValue);
-  setProductList([productValue]);
-  console.log("Product list set:", productValue);
-  parseList(productValue);
-}
-
-      const productNameIndex = detectedText.toLowerCase().indexOf('product name');
-      if (productNameIndex !== -1) {
-        const startProductName = productNameIndex + 'product name'.length;
-        const productNameValue = detectedText.substring(startProductName).split('\n')[0].trim();
-        setProductName(productNameValue);
-        setProductNameStatus(!!productNameValue);
-      }
-
-      const quantityIndex = detectedText.toLowerCase().indexOf('quantity');
-      if (quantityIndex !== -1) {
-        const startQuantity = quantityIndex + 'quantity'.length;
-        const quantityValue = detectedText.substring(startQuantity).split('\n')[0].trim();
-        setQuantity(quantityValue);
-        setQuantityStatus(!!quantityValue);
-      }
-
-      const priceIndex = detectedText.toLowerCase().indexOf('price');
-      if (priceIndex !== -1) {
-        const startPrice = priceIndex + 'price'.length;
-        const priceValue = detectedText.substring(startPrice).split('\n')[0].trim();
-        setPrice(priceValue);
-        setPriceStatus(!!priceValue);
-      }
-
-      const totalIndex = detectedText.toLowerCase().indexOf('total');
-      if (totalIndex !== -1) {
-        const startTotal = totalIndex + 'total'.length;
-        const totalValue = detectedText.substring(startTotal).split('\n')[0].trim();
-        setTotal(totalValue);
-        setTotalStatus(!!totalValue);
-      }
-
-      let invoiceNumberValue = '';
-      const invoiceNumberIndex = detectedText.toLowerCase().indexOf('invoice number');
-      if (invoiceNumberIndex !== -1) {
-        const startInvoiceNumber = invoiceNumberIndex + 'invoice number'.length;
-        invoiceNumberValue = detectedText.substring(startInvoiceNumber).split('\n')[0].trim();
-      }
-
-      setInvoiceNumber(invoiceNumberValue || generateInvoiceNumber());
-      setExtractionMessage('Text extracted successfully!');
-
-    } catch (error) {
-      console.error('Error analyzing image:', error.response ? error.response.data : error.message);
-      setExtractionMessage('Text extraction failed. Please try again.');
-    }
-  };
-
-  const generateInvoiceNumber = () => {
-    const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    return `INV${randomNumber}`;
-  };
-
-  const getCurrentUserCompanyID = async () => {
-    try {
-      const currentUser = auth.currentUser;
-
-      if (currentUser) {
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          return userData.companyID;
-        } else {
-          console.error('User document not found.');
-          return null;
+      // Check if products exist in the database
+      items.forEach(async (item) => {
+        const productDoc = await db.collection("products").doc(item.name).get();
+        if (!productDoc.exists) {
+          setProductExists(false);
         }
-      } else {
-        console.error('User not authenticated.');
-        return null;
-      }
+      });
     } catch (error) {
-      console.error('Error getting user company ID:', error);
-      return null;
+      console.error("Error analyzing image:", error);
+      Alert.alert("Text extraction failed. Please try again.");
     }
   };
 
-  const saveInvoiceToFirestore = async () => {
+  const parseHandwrittenList = (text) => {
+    const items = [];
+    const lines = text.split("\n");
+    for (const line of lines) {
+      const parts = line.split(",");
+      if (parts.length === 3) {
+        const name = parts[0].replace(/^\d+\.\s*/, "");
+        const price = parseFloat(parts[1].replace("€", ""));
+        const quantity = parseFloat(parts[2].trim());
+        items.push({ name, price, quantity });
+      }
+    }
+    return items;
+  };
+
+  const handleSaveInvoice = async () => {
     try {
+      if (
+        customerName.trim() === "" ||
+        customerAddress.trim() === "" ||
+        phoneNumber.trim() === "" ||
+        productList.length === 0 ||
+        !customerExists ||
+        !productExists
+      ) {
+        Alert.alert(
+          "Please fill in all customer details, ensure all products exist, and add at least one product"
+        );
+        return;
+      }
+
       const currentUser = auth.currentUser;
-      const userId = currentUser ? currentUser.uid : null;
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
 
-      if (!userId) {
-        alert('User not authenticated. Please login.');
-        return;
-      }
-
-      if (!customerName || !customerAddress || !productName || !quantity || !price || !phoneNumber || !total || !invoiceNumber) {
-        alert('Please fill in all the required fields.');
-        return;
-      }
-
-      const numericQuantity = parseFloat(quantity);
-      const numericPrice = parseFloat(price);
-      const numericTotal = parseFloat(total);
-      const numericPhoneNumber = parseFloat(phoneNumber);
-
-      if (isNaN(numericQuantity) || isNaN(numericPrice) || isNaN(numericTotal) || isNaN(numericPhoneNumber)) {
-        alert('Invalid value for quantity, price, total, or phone numbermake sure it just the number.');
-        return;
-      }
-
-      const companyID = await getCurrentUserCompanyID();
       if (!companyID) {
-        alert('Error getting user company ID. Please try again.');
+        Alert.alert("Company ID not found for the current user");
         return;
       }
+
+      const generatedInvoiceNumber = await generateInvoiceNumber();
 
       const invoiceData = {
-        userId,
+        invoiceNumber: generatedInvoiceNumber,
         companyID,
         customerName,
         customerAddress,
-        productName,
-        quantity: numericQuantity,
-        price: numericPrice,
-        phoneNumber: numericPhoneNumber,
-        total: numericTotal,
-        invoiceNumber,
-        recognizedText,
+        phoneNumber: parseFloat(phoneNumber),
         date,
       };
 
-      await db.collection('invoices').add(invoiceData);
-      alert('Invoice data saved to Firestore!');
-      navigation.goBack();
+      await db
+        .collection("invoices")
+        .doc(generatedInvoiceNumber)
+        .set(invoiceData);
+
+      productList.forEach(async (product) => {
+        await db
+          .collection("invoices")
+          .doc(generatedInvoiceNumber)
+          .collection("products")
+          .add({
+            productName: product.name,
+            productPrice: parseFloat(product.price),
+            quantity: parseFloat(product.quantity),
+          });
+      });
+
+      setCustomerName("");
+      setCustomerAddress("");
+      setPhoneNumber("");
+      setDate(new Date());
+      setProductList([{ name: "", price: "0.00", quantity: "0.00" }]);
+      setCustomerExists(true);
+      setProductExists(true);
+
+      Alert.alert("Invoice details saved successfully!");
     } catch (error) {
-      console.error('Error saving invoice to Firestore:', error);
-      alert('Error saving invoice data. Please try again.');
+      console.error("Error saving invoice details:", error);
+      Alert.alert("Failed to save invoice details.");
     }
+  };
+
+  const generateInvoiceNumber = async () => {
+    while (true) {
+      const randomNumber = Math.floor(1000 + Math.random() * 9000);
+      const generatedInvoiceNumber = `INV${randomNumber}`;
+      const invoiceSnapshot = await db
+        .collection("invoices")
+        .doc(generatedInvoiceNumber)
+        .get();
+      if (!invoiceSnapshot.exists) {
+        setInvoiceNumber(generatedInvoiceNumber);
+        return generatedInvoiceNumber;
+      }
+    }
+  };
+
+  const handleDatePress = () => {
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    const currentDate = selectedDate || date;
+    setDate(currentDate);
+  };
+
+  const addProduct = () => {
+    const newProduct = { name: "", price: "0.00", quantity: "0.00" };
+    setProductList([...productList, newProduct]);
+  };
+
+  const updateProduct = (index, field, value) => {
+    const updatedProductList = [...productList];
+    updatedProductList[index][field] = value;
+    setProductList(updatedProductList);
+  };
+
+  const calculateTotal = () => {
+    let total = 0;
+    productList.forEach((product) => {
+      total += product.price * product.quantity;
+    });
+    return total.toFixed(2); // Round to 2 decimal places
+  };
+
+  const handleDeleteProduct = (index) => {
+    const updatedProductList = [...productList];
+    updatedProductList.splice(index, 1);
+    setProductList(updatedProductList);
   };
 
   return (
@@ -307,9 +294,30 @@ if (productIndex !== -1) {
       <View style={styles.container}>
         {imageUri && <Image source={{ uri: imageUri }} style={styles.image} />}
 
+        <Text style={styles.label}>Invoice Number: {invoiceNumber}</Text>
+
+        <TouchableOpacity onPress={handleDatePress}>
+          <Text style={styles.label}>Date: {date.toLocaleDateString()}</Text>
+        </TouchableOpacity>
+
+        {showDatePicker && (
+          <DateTimePicker
+            testID="dateTimePicker"
+            value={date}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={handleDateChange}
+            maximumDate={new Date()} // no future dates
+          />
+        )}
+
         <View style={styles.fieldContainer}>
-          <Text style={{ color: customerNameStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {customerNameStatus ? '✓' : '✗'}
+          <Text
+            style={{ color: customerNameStatus ? "green" : "red" }}
+            onPress={() => setExtractionMessage("Text extracted successfully!")}
+          >
+            {customerNameStatus ? "✓" : "✗"}
           </Text>
           <TextInput
             style={styles.input}
@@ -323,25 +331,11 @@ if (productIndex !== -1) {
         </View>
 
         <View style={styles.fieldContainer}>
-          <Text style={{ color: phoneNumberStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {phoneNumberStatus ? '✓' : '✗'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number"
-            value={phoneNumber}
-            onChangeText={(text) => {
-              setPhoneNumber(text);
-              setPhoneNumberStatus(!!text);
-            }}
-          />
-        </View>
-        
-  <Text> {productList} </Text>
-        
-        <View style={styles.fieldContainer}>
-          <Text style={{ color: customerAddressStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {customerAddressStatus ? '✓' : '✗'}
+          <Text
+            style={{ color: customerAddressStatus ? "green" : "red" }}
+            onPress={() => setExtractionMessage("Text extracted successfully!")}
+          >
+            {customerAddressStatus ? "✓" : "✗"}
           </Text>
           <TextInput
             style={styles.input}
@@ -355,91 +349,78 @@ if (productIndex !== -1) {
         </View>
 
         <View style={styles.fieldContainer}>
-          <Text style={{ color: productNameStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {productNameStatus ? '✓' : '✗'}
+          <Text
+            style={{ color: phoneNumberStatus ? "green" : "red" }}
+            onPress={() => setExtractionMessage("Text extracted successfully!")}
+          >
+            {phoneNumberStatus ? "✓" : "✗"}
           </Text>
           <TextInput
             style={styles.input}
-            placeholder="Product Name"
-            value={productName}
+            placeholder="Phone Number"
+            value={phoneNumber}
             onChangeText={(text) => {
-              setProductName(text);
-              setProductNameStatus(!!text);
+              setPhoneNumber(text);
+              setPhoneNumberStatus(!!text);
             }}
           />
         </View>
 
-        <View style={styles.fieldContainer}>
-          <Text style={{ color: quantityStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {quantityStatus ? '✓' : '✗'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Quantity"
-            value={quantity}
-            onChangeText={(text) => {
-              setQuantity(text);
-              setQuantityStatus(!!text);
-            }}
-          />
-        </View>
+        <ScrollView style={styles.productListContainer}>
+          <Text style={styles.text}>Products list :</Text>
+          {productList.map((item, index) => (
+            <View style={styles.productBox} key={index}>
+              <Text>Product {index + 1}:</Text>
+              <DeleteProductButton
+                index={index}
+                onDelete={handleDeleteProduct}
+              />
 
-        <View style={styles.fieldContainer}>
-          <Text style={{ color: priceStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {priceStatus ? '✓' : '✗'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Price"
-            value={price}
-            onChangeText={(text) => {
-              setPrice(text);
-              setPriceStatus(!!text);
-            }}
-          />
-        </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Product Name"
+                value={item.name}
+                onChangeText={(text) => updateProduct(index, "name", text)}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Price"
+                value={item.price.toString()}
+                onChangeText={(text) =>
+                  updateProduct(index, "price", text.replace(/[^0-9.]/g, ""))
+                }
+                keyboardType="decimal-pad"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Quantity"
+                value={item.quantity.toString()}
+                onChangeText={(text) =>
+                  updateProduct(index, "quantity", text.replace(/[^0-9.]/g, ""))
+                }
+                keyboardType="decimal-pad"
+              />
+            </View>
+          ))}
+        </ScrollView>
 
-        <View style={styles.fieldContainer}>
-          <Text style={{ color: totalStatus ? 'green' : 'red' }} onPress={() => setExtractionMessage('Text extracted successfully!')}>
-            {totalStatus ? '✓' : '✗'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Total"
-            value={total}
-            onChangeText={(text) => {
-              setTotal(text);
-              setTotalStatus(!!text);
-            }}
-          />
-        </View>
-
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.fieldContainer}>
-          <Text>Date: {date.toLocaleDateString()}</Text>
+        <TouchableOpacity style={styles.button} onPress={addProduct}>
+          <Text style={styles.text}>Add Product</Text>
         </TouchableOpacity>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              setDate(selectedDate || date);
-            }}
-          />
-        )}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Invoice Number"
-          value={invoiceNumber}
-          onChangeText={(text) => setInvoiceNumber(text)}
-        />
-
-        <TouchableOpacity style={styles.button} onPress={saveInvoiceToFirestore}>
+        <TouchableOpacity style={styles.button} onPress={handleSaveInvoice}>
           <Text style={styles.text}>Save Invoice</Text>
         </TouchableOpacity>
+
+        <Text style={styles.label}>Total: {calculateTotal()}</Text>
+
+        {!customerExists && (
+          <Text style={{ color: "red" }}>Customer does not exist</Text>
+        )}
+
+        {!productExists && (
+          <Text style={{ color: "red" }}>Product does not exist</Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -448,42 +429,59 @@ if (productIndex !== -1) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-  },
-  fieldContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '80%',
-    marginVertical: 8,
+    width: "100%",
   },
   input: {
     borderWidth: 1,
-    flex: 1,
+    borderRadius: 5,
     padding: 10,
+    marginVertical: 5,
+    width: "100%",
   },
   image: {
     width: 300,
     height: 300,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     marginBottom: 10,
   },
   button: {
-    backgroundColor: 'lightblue',
+    backgroundColor: "lightblue",
     padding: 15,
     margin: 10,
     borderRadius: 5,
-    width: '80%',
-    alignItems: 'center',
+    width: "80%",
+    alignItems: "center",
   },
   text: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
+    width: "100%",
   },
   scrollViewContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
+    width: "100%",
+  },
+  fieldContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  productListContainer: {
+    width: "100%",
+    paddingHorizontal: 20,
+  },
+  label: {
+    fontSize: 16,
+    marginVertical: 5,
+    width: "100%",
+  },
+  productBox: {
+    borderWidth: 2,
+    padding: 15,
   },
 });
 
