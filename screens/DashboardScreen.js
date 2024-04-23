@@ -5,150 +5,208 @@ import {
   View,
   Dimensions,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
-import { LineChart, BarChart } from "react-native-chart-kit";
+import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 import { db, auth } from "../firebase";
+import { Picker } from "@react-native-picker/picker";
 
 const DashboardScreen = () => {
-  const [totalSales, setTotalSales] = useState(0);
-  const [dateLabels, setDateLabels] = useState([]);
   const [salesData, setSalesData] = useState([]);
-  const [error, setError] = useState(null);
+  const [topProductsData, setTopProductsData] = useState([]);
+  const [topCustomersData, setTopCustomersData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [productData, setProductData] = useState([]);
+  const [error, setError] = useState(null);
+  const [timeRange, setTimeRange] = useState("31");
 
-  const formattedDate = (date) => {
-    const day = date.getDate().toString().padStart(2, "0");
-    return day;
-  };
+  useEffect(() => {
+    fetchSalesData(timeRange);
+    fetchTopProducts();
+    fetchTopCustomers();
+  }, [timeRange]);
 
-  const fetchData = async () => {
+  const fetchSalesData = async (range) => {
     try {
-      console.log("Start data fetching");
-
       const currentUser = auth.currentUser;
-
       if (!currentUser) {
-        setError("User not authenticated");
-        setLoading(false);
-        return;
+        throw new Error("Current user not found.");
       }
 
-      const userUid = currentUser.uid;
-      console.log("Current User UID:", userUid);
+      console.log("Fetching user data...");
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
 
-      const usersRef = db.collection("users");
-      const userDoc = await usersRef.doc(userUid).get();
-
-      if (!userDoc.exists) {
-        setError("User document not found");
-        setLoading(false);
-        return;
+      if (!companyID) {
+        throw new Error("Company ID not found for the current user.");
       }
 
-      const userCompanyID = userDoc.data().companyID;
+      console.log("Fetching sales data...");
+      const endDate = new Date();
+      const startDate = new Date();
 
-      console.log("User Company ID:", userCompanyID);
+      switch (range) {
+        case "31":
+          startDate.setDate(endDate.getDate() - 31);
+          break;
+        case "183":
+          startDate.setMonth(endDate.getMonth() - 6);
+          break;
+        case "365":
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+        case "730":
+          startDate.setFullYear(endDate.getFullYear() - 2);
+          break;
+        case "1095":
+          startDate.setFullYear(endDate.getFullYear() - 3);
+          break;
+        default:
+          startDate.setDate(endDate.getDate() - 31);
+      }
 
-      const invoicesRef = db.collection("invoices");
-
-      const querySnapshot = await invoicesRef
-        .where("companyID", "==", userCompanyID)
+      const salesSnapshot = await db
+        .collection("invoices")
+        .where("companyID", "==", companyID)
+        .where("date", ">=", startDate)
+        .where("date", "<=", endDate)
+        .orderBy("date")
         .get();
 
-      console.log("Query Snapshot:", querySnapshot);
-
-      if (querySnapshot.empty) {
-        console.log("No invoices found for the current user.");
-        setLoading(false);
-        return;
-      }
-
-      const salesDataMap = new Map();
-      const dateLabelsArray = [];
-      const productMap = new Map();
-      let totalSalesAmount = 0;
-
-      querySnapshot.forEach((doc) => {
-        try {
-          const amount = doc.data().total || doc.data().totalAmount || 0;
-          const invoiceDate = doc.data().date.toDate();
-          const formattedDateString = formattedDate(invoiceDate);
-
-          if (salesDataMap.has(formattedDateString)) {
-            salesDataMap.set(
-              formattedDateString,
-              salesDataMap.get(formattedDateString) + amount
-            );
+      const sales = {};
+      salesSnapshot.forEach((doc) => {
+        const saleData = doc.data();
+        const date = saleData.date.toDate().toLocaleDateString();
+        const total = parseFloat(saleData.total);
+        if (!isNaN(total)) {
+          if (date in sales) {
+            sales[date] += total;
           } else {
-            salesDataMap.set(formattedDateString, amount);
-            dateLabelsArray.push(formattedDateString);
+            sales[date] = total;
           }
-
-          const products = doc.data().products || [];
-          products.forEach((product) => {
-            if (productMap.has(product.name)) {
-              productMap.set(
-                product.name,
-                productMap.get(product.name) + product.quantity
-              );
-            } else {
-              productMap.set(product.name, product.quantity);
-            }
-          });
-
-          totalSalesAmount += amount;
-        } catch (dateError) {
-          console.error("Error parsing date:", dateError.message);
         }
       });
 
-      const sortedDateLabels = dateLabelsArray.sort((a, b) => {
-        const dateA = new Date(a);
-        const dateB = new Date(b);
-        return dateA - dateB;
-      });
+      console.log("Sales data fetched:", sales);
+      const formattedSalesData = Object.entries(sales).map(([date, total]) => ({
+        date,
+        total: total.toFixed(2),
+      }));
 
-      const salesDataArray = sortedDateLabels.map(
-        (date) => salesDataMap.get(date) || 0
-      );
-
-      console.log("Total Sales:", totalSalesAmount);
-      console.log("Date Labels:", sortedDateLabels);
-
-      setTotalSales(totalSalesAmount);
-      setSalesData(salesDataArray);
-      setDateLabels(sortedDateLabels);
-      setLoading(false);
-
-      const firstDate = new Date(sortedDateLabels[0]);
-      const lastDate = new Date(sortedDateLabels[sortedDateLabels.length - 1]);
-
-      const formattedFirstDate = `${firstDate.toLocaleString("default", {
-        month: "long",
-      })} ${firstDate.getFullYear()}`;
-      const formattedLastDate = `${lastDate.toLocaleString("default", {
-        month: "long",
-      })} ${lastDate.getFullYear()}`;
-      console.log("From:", formattedFirstDate);
-      console.log("To:", formattedLastDate);
-
-      setFromDate(formattedFirstDate);
-      setToDate(formattedLastDate);
-
-      setProductData([...productMap]);
+      console.log("Formatted sales data:", formattedSalesData);
+      setSalesData(formattedSalesData);
     } catch (error) {
-      console.error("Error fetching data:", error.message);
-      setError(`Error fetching data: ${error.message}`);
+      console.error("Error fetching sales data:", error);
+      setError("Failed to fetch sales data. Please try again later.");
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchTopProducts = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("Current user not found.");
+      }
+
+      console.log("Fetching user data...");
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        throw new Error("Company ID not found for the current user.");
+      }
+
+      console.log("Fetching top selling products...");
+      const invoicesSnapshot = await db
+        .collection("invoices")
+        .where("companyID", "==", companyID)
+        .get();
+
+      const productQuantityMap = new Map();
+      invoicesSnapshot.forEach((doc) => {
+        const productList = doc.data().productList;
+        productList.forEach((product) => {
+          const productName = product.name;
+          const quantity = parseInt(product.quantity);
+          if (!productQuantityMap.has(productName)) {
+            productQuantityMap.set(productName, quantity);
+          } else {
+            productQuantityMap.set(
+              productName,
+              productQuantityMap.get(productName) + quantity
+            );
+          }
+        });
+      });
+
+      const topProducts = [...productQuantityMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([productName, quantity]) => ({ productName, quantity }));
+
+      console.log("Top selling products data fetched:", topProducts);
+      setTopProductsData(topProducts);
+    } catch (error) {
+      console.error("Error fetching top selling products:", error);
+      setError("Failed to fetch top selling products. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTopCustomers = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("Current user not found.");
+      }
+
+      console.log("Fetching user data...");
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        throw new Error("Company ID not found for the current user.");
+      }
+
+      console.log("Fetching top customers...");
+      const invoicesSnapshot = await db
+        .collection("invoices")
+        .where("companyID", "==", companyID)
+        .get();
+
+      const customerInvoiceCountMap = new Map();
+      invoicesSnapshot.forEach((doc) => {
+        const customerName = doc.data().customerName;
+        if (!customerInvoiceCountMap.has(customerName)) {
+          customerInvoiceCountMap.set(customerName, 1);
+        } else {
+          customerInvoiceCountMap.set(
+            customerName,
+            customerInvoiceCountMap.get(customerName) + 1
+          );
+        }
+      });
+
+      const totalInvoices = invoicesSnapshot.size;
+      const topCustomers = [...customerInvoiceCountMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([customerName, invoiceCount]) => ({
+          customerName,
+          percentage: ((invoiceCount / totalInvoices) * 100).toFixed(2),
+        }));
+
+      console.log("Top customers data fetched:", topCustomers);
+      setTopCustomersData(topCustomers);
+    } catch (error) {
+      console.error("Error fetching top customers:", error);
+      setError("Failed to fetch top customers. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -159,7 +217,6 @@ const DashboardScreen = () => {
   }
 
   if (error) {
-    console.error(error);
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
@@ -167,75 +224,122 @@ const DashboardScreen = () => {
     );
   }
 
-  console.log("Rendered successfully");
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.totalSalesText}>
-        Total Sales: €{totalSales.toFixed(2)}
-      </Text>
-      <Text
-        style={styles.dateRangeText}
-      >{`From: ${fromDate} To: ${toDate}`}</Text>
-      <LineChart
-        data={{
-          labels: dateLabels,
-          datasets: [
-            {
-              data: salesData,
-              strokeWidth: 2,
-            },
-          ],
-        }}
-        width={Dimensions.get("window").width}
-        height={220}
-        yAxisLabel={"€"}
-        chartConfig={{
-          backgroundColor: "#e26a00",
-          backgroundGradientFrom: "#fb8c00",
-          backgroundGradientTo: "#ffa726",
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-          style: {
-            borderRadius: 16,
-          },
-        }}
-        bezier
-        style={{
-          marginVertical: 8,
-          borderRadius: 16,
-        }}
-      />
-      <View style={styles.barChartContainer}>
-        <BarChart
+    <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <View style={styles.container}>
+        <Picker
+          selectedValue={timeRange}
+          style={{ height: 50, width: 150 }}
+          onValueChange={(itemValue, itemIndex) => setTimeRange(itemValue)}
+        >
+          <Picker.Item label="31 Days" value="31" />
+          <Picker.Item label="6 Months" value="183" />
+          <Picker.Item label="1 Year" value="365" />
+          <Picker.Item label="2 Years" value="730" />
+          <Picker.Item label="3 Years" value="1095" />
+        </Picker>
+        <Text style={styles.chartTitle}>Sales Data</Text>
+        <LineChart
           data={{
-            labels: productData.map((item) => item[0]),
+            labels: salesData.map((sale) => sale.date),
             datasets: [
               {
-                data: productData.map((item) => item[1]),
+                data: salesData.map((sale) => sale.total),
               },
             ],
           }}
           width={Dimensions.get("window").width}
           height={220}
-          yAxisLabel={"Qty"}
+          yAxisSuffix=" €"
+          yAxisInterval={1}
           chartConfig={{
-            backgroundColor: "#FF5733",
-            backgroundGradientFrom: "#FF5733",
-            backgroundGradientTo: "#FF5733",
-            decimalPlaces: 0,
+            backgroundColor: "#e26a00",
+            backgroundGradientFrom: "#fb8c00",
+            backgroundGradientTo: "#ffa726",
+            decimalPlaces: 2,
             color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             style: {
               borderRadius: 16,
             },
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#ffa726",
+            },
           }}
+          bezier
           style={{
             marginVertical: 8,
             borderRadius: 16,
           }}
         />
+        <Text style={styles.chartTitle}>Top Selling Products</Text>
+        <BarChart
+          data={{
+            labels: topProductsData.map((product) => product.productName),
+            datasets: [
+              {
+                data: topProductsData.map((product) => product.quantity),
+              },
+            ],
+          }}
+          width={Dimensions.get("window").width - 16}
+          height={220}
+          yAxisSuffix=""
+          yAxisInterval={1}
+          chartConfig={{
+            backgroundColor: "#e26a00",
+            backgroundGradientFrom: "#fb8c00",
+            backgroundGradientTo: "#ffa726",
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#ffa726",
+            },
+          }}
+          bezier
+          style={{
+            marginVertical: 8,
+            borderRadius: 16,
+          }}
+        />
+        <Text style={styles.chartTitle}>Top Customers</Text>
+        <PieChart
+          data={topCustomersData.map((customer, index) => ({
+            name: `${customer.customerName} (${customer.percentage}%)`,
+            amount: parseInt(customer.percentage),
+            color: `#${index + 1}${index + 2}${index + 3}`,
+          }))}
+          width={Dimensions.get("window").width - 16}
+          height={220}
+          chartConfig={{
+            backgroundColor: "#e26a00",
+            backgroundGradientFrom: "#fb8c00",
+            backgroundGradientTo: "#ffa726",
+            decimalPlaces: 2,
+            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+            propsForLabels: {
+              fontSize: 10,
+            },
+          }}
+          accessor="amount"
+          backgroundColor="transparent"
+          paddingLeft="15"
+          absolute
+        />
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -244,7 +348,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    flexDirection: "column",
+    marginTop: 20,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContainer: {
     flex: 1,
@@ -257,319 +366,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   errorText: {
-    color: "red",
-    fontSize: 16,
-  },
-  totalSalesText: {
     fontSize: 18,
+    color: "red",
+  },
+  chartTitle: {
+    fontSize: 20,
     fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 10,
-  },
-  dateRangeText: {
-    fontSize: 15,
-    textAlign: "center",
-    marginVertical: 10,
-  },
-  barChartContainer: {
-    marginVertical: 8,
-    borderRadius: 16,
+    marginBottom: 10,
   },
 });
 
 export default DashboardScreen;
-
-// import React, { useState, useEffect } from "react";
-// import {
-//   StyleSheet,
-//   Text,
-//   View,
-//   Dimensions,
-//   ActivityIndicator,
-// } from "react-native";
-// import { LineChart, BarChart } from "react-native-chart-kit";
-// import { db, auth } from "../firebase";
-
-// const DashboardScreen = () => {
-//   const [totalSales, setTotalSales] = useState(0);
-//   const [dateLabels, setDateLabels] = useState([]);
-//   const [salesData, setSalesData] = useState([]);
-//   const [error, setError] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [fromDate, setFromDate] = useState("");
-//   const [toDate, setToDate] = useState("");
-//   const [productData, setProductData] = useState([]);
-
-//   const formattedDate = (date) => {
-//     const day = date.getDate().toString().padStart(2, "0");
-//     return day;
-//   };
-
-//   const fetchData = async () => {
-//     try {
-//       console.log("Start data fetching");
-
-//       const currentUser = auth.currentUser;
-
-//       if (!currentUser) {
-//         setError("User not authenticated");
-//         setLoading(false);
-//         return;
-//       }
-
-//       const userUid = currentUser.uid;
-//       console.log("Current User UID:", userUid);
-
-//       const usersRef = db.collection("users");
-//       const userDoc = await usersRef.doc(userUid).get();
-
-//       if (!userDoc.exists) {
-//         setError("User document not found");
-//         setLoading(false);
-//         return;
-//       }
-
-//       const userCompanyID = userDoc.data().companyID;
-
-//       console.log("User Company ID:", userCompanyID);
-
-//       const invoicesRef = db.collection("invoices");
-
-//       const querySnapshot = await invoicesRef
-//         .where("companyID", "==", userCompanyID)
-//         .get();
-
-//       console.log("Query Snapshot:", querySnapshot);
-
-//       if (querySnapshot.empty) {
-//         console.log("No invoices found for the current user.");
-//         setLoading(false);
-//         return;
-//       }
-
-//       const salesDataMap = new Map();
-//       const dateLabelsArray = [];
-//       const productMap = new Map();
-
-//       const promises = [];
-
-//       querySnapshot.forEach((doc) => {
-//         try {
-//           const amount = doc.data().total;
-//           const invoiceDate = doc.data().date.toDate();
-//           const formattedDateString = formattedDate(invoiceDate);
-
-//           if (salesDataMap.has(formattedDateString)) {
-//             salesDataMap.set(
-//               formattedDateString,
-//               salesDataMap.get(formattedDateString) + amount
-//             );
-//           } else {
-//             salesDataMap.set(formattedDateString, amount);
-//             dateLabelsArray.push(formattedDateString);
-//           }
-
-//           // Fetch products for each invoice from the 'products' subcollection
-//           const productsPromise = doc.ref.collection("products").get();
-//           promises.push(productsPromise);
-
-//           productsPromise.then((productsSnapshot) => {
-//             productsSnapshot.forEach((productDoc) => {
-//               const productName = productDoc.data().name;
-//               const productQuantity = productDoc.data().quantity;
-
-//               if (productMap.has(productName)) {
-//                 productMap.set(
-//                   productName,
-//                   productMap.get(productName) + productQuantity
-//                 );
-//               } else {
-//                 productMap.set(productName, productQuantity);
-//               }
-//             });
-//           });
-//         } catch (dateError) {
-//           console.error("Error parsing date:", dateError.message);
-//         }
-//       });
-
-//       await Promise.all(promises);
-
-//       const sortedDateLabels = dateLabelsArray.sort((a, b) => {
-//         const dateA = new Date(a);
-//         const dateB = new Date(b);
-//         return dateA - dateB;
-//       });
-
-//       const salesDataArray = sortedDateLabels.map(
-//         (date) => salesDataMap.get(date) || 0
-//       );
-
-//       const tempTotalSales = salesDataArray.reduce(
-//         (acc, curr) => acc + curr,
-//         0
-//       );
-
-//       console.log("Total Sales:", tempTotalSales);
-//       console.log("Date Labels:", sortedDateLabels);
-
-//       setTotalSales(tempTotalSales);
-//       setSalesData(salesDataArray);
-//       setDateLabels(sortedDateLabels);
-//       setLoading(false);
-
-//       const firstDate = new Date(sortedDateLabels[0]);
-//       const lastDate = new Date(sortedDateLabels[sortedDateLabels.length - 1]);
-
-//       const formattedFirstDate = `${firstDate.toLocaleString("default", {
-//         month: "long",
-//       })} ${firstDate.getFullYear()}`;
-//       const formattedLastDate = `${lastDate.toLocaleString("default", {
-//         month: "long",
-//       })} ${lastDate.getFullYear()}`;
-//       console.log("From:", formattedFirstDate);
-//       console.log("To:", formattedLastDate);
-
-//       setFromDate(formattedFirstDate);
-//       setToDate(formattedLastDate);
-
-//       setProductData([...productMap]);
-//     } catch (error) {
-//       console.error("Error fetching data:", error.message);
-//       setError(`Error fetching data: ${error.message}`);
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchData();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <View style={styles.loadingContainer}>
-//         <ActivityIndicator size="large" color="#0000ff" />
-//       </View>
-//     );
-//   }
-
-//   if (error) {
-//     console.error(error);
-//     return (
-//       <View style={styles.errorContainer}>
-//         <Text style={styles.errorText}>{error}</Text>
-//       </View>
-//     );
-//   }
-
-//   console.log("Rendered successfully");
-
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.totalSalesText}>
-//         Total Sales: €{totalSales.toFixed(2)}
-//       </Text>
-//       <Text
-//         style={styles.dateRangeText}
-//       >{`From: ${fromDate} To: ${toDate}`}</Text>
-//       <LineChart
-//         data={{
-//           labels: dateLabels,
-//           datasets: [
-//             {
-//               data: salesData,
-//               strokeWidth: 2,
-//             },
-//           ],
-//         }}
-//         width={Dimensions.get("window").width}
-//         height={220}
-//         yAxisLabel={"€"}
-//         chartConfig={{
-//           backgroundColor: "#e26a00",
-//           backgroundGradientFrom: "#fb8c00",
-//           backgroundGradientTo: "#ffa726",
-//           decimalPlaces: 2,
-//           color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-//           style: {
-//             borderRadius: 16,
-//           },
-//         }}
-//         bezier
-//         style={{
-//           marginVertical: 8,
-//           borderRadius: 16,
-//         }}
-//       />
-//       <View style={styles.barChartContainer}>
-//         <BarChart
-//           data={{
-//             labels: [...productData.keys()],
-//             datasets: [
-//               {
-//                 data: [...productData.values()],
-//               },
-//             ],
-//           }}
-//           width={Dimensions.get("window").width}
-//           height={220}
-//           yAxisLabel={"Qty"}
-//           chartConfig={{
-//             backgroundColor: "#FF5733",
-//             backgroundGradientFrom: "#FF5733",
-//             backgroundGradientTo: "#FF5733",
-//             decimalPlaces: 0,
-//             color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-//             style: {
-//               borderRadius: 16,
-//             },
-//           }}
-//           style={{
-//             marginVertical: 8,
-//             borderRadius: 16,
-//           }}
-//         />
-//       </View>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//     flexDirection: "column",
-//   },
-//   loadingContainer: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   errorContainer: {
-//     flex: 1,
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   errorText: {
-//     color: "red",
-//     fontSize: 16,
-//   },
-//   totalSalesText: {
-//     fontSize: 18,
-//     fontWeight: "bold",
-//     textAlign: "center",
-//     marginVertical: 10,
-//   },
-//   dateRangeText: {
-//     fontSize: 15,
-//     textAlign: "center",
-//     marginVertical: 10,
-//   },
-//   barChartContainer: {
-//     marginVertical: 8,
-//     borderRadius: 16,
-//   },
-// });
-
-// export default DashboardScreen;

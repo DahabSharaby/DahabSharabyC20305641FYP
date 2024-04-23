@@ -162,8 +162,17 @@ export function InputScreen({ navigation }) {
         return;
       }
 
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        Alert.alert("Company ID not found for the current user.");
+        return;
+      }
+
       const invoiceData = {
         invoiceNumber: invoiceNumber,
+        companyID: companyID,
         customerName,
         customerAddress,
         phoneNumber,
@@ -174,7 +183,21 @@ export function InputScreen({ navigation }) {
 
       await db.collection("invoices").doc(invoiceNumber).set(invoiceData);
 
-      Alert.alert("Invoice details saved successfully!");
+      Alert.alert("Invoice details saved successfully!", "", [
+        {
+          text: "OK",
+          onPress: () => {
+            setCustomerName("");
+            setCustomerAddress("");
+            setPhoneNumber("");
+            setSelectedDate(new Date());
+            setProductList([]);
+            setInvoiceNumber("");
+
+            navigation.navigate("Main");
+          },
+        },
+      ]);
     } catch (error) {
       console.error("Error saving invoice details:", error);
       Alert.alert("Failed to save invoice details.");
