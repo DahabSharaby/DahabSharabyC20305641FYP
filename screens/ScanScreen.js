@@ -1,5 +1,5 @@
-//AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4
-
+// //AIzaSyCWeOzm7cbHRlxg8lf09CBtAH-nbcu4e-4
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,15 +10,15 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import React, { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import axios from "axios";
-import { db, auth } from "../firebase";
+import { db } from "../firebase";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import DeleteProductButton from "../components/DeleteProductButton";
+import { useNavigation } from "@react-navigation/native";
 
-const ScanScreen = ({ route, navigation }) => {
+const ScanScreen = ({ route }) => {
   const [imageUri, setImageUri] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -32,6 +32,8 @@ const ScanScreen = ({ route, navigation }) => {
   const [phoneNumberStatus, setPhoneNumberStatus] = useState(false);
   const [customerExists, setCustomerExists] = useState(true);
   const [productExists, setProductExists] = useState(true);
+
+  const navigation = useNavigation();
 
   useEffect(() => {
     const generateNumber = async () => {
@@ -109,13 +111,6 @@ const ScanScreen = ({ route, navigation }) => {
           .trim();
         setCustomerName(nameValue);
         setCustomerNameStatus(!!nameValue);
-
-        // Check if customer exists in the database
-        const customerDoc = await db
-          .collection("customers")
-          .doc(nameValue)
-          .get();
-        setCustomerExists(customerDoc.exists);
       }
 
       const addressIndex = detectedText.toLowerCase().indexOf("address -");
@@ -142,12 +137,13 @@ const ScanScreen = ({ route, navigation }) => {
 
       const items = parseHandwrittenList(detectedText);
       setProductList(items);
-
-      // Check if products exist in the database
       items.forEach(async (item) => {
-        const productDoc = await db.collection("products").doc(item.name).get();
-        if (!productDoc.exists) {
-          setProductExists(false);
+        const productDoc = await db
+          .collection("products")
+          .doc(item.name.toLowerCase())
+          .get();
+        if (productDoc.exists) {
+          console.log("product check", productDoc.exists);
         }
       });
     } catch (error) {
@@ -162,7 +158,7 @@ const ScanScreen = ({ route, navigation }) => {
     for (const line of lines) {
       const parts = line.split(",");
       if (parts.length === 3) {
-        const name = parts[0].replace(/^\d+\.\s*/, "");
+        const name = parts[0].replace(/^\d+\.\s*/, "").trim(); // Trim the product name
         const price = parseFloat(parts[1].replace("€", ""));
         const quantity = parseFloat(parts[2].trim());
         items.push({ name, price, quantity });
@@ -173,65 +169,89 @@ const ScanScreen = ({ route, navigation }) => {
 
   const handleSaveInvoice = async () => {
     try {
+      console.log("Starting handleSaveInvoice...");
+
+      // Check if all required fields are filled
+      console.log("Checking required fields...");
       if (
         customerName.trim() === "" ||
         customerAddress.trim() === "" ||
         phoneNumber.trim() === "" ||
-        productList.length === 0 ||
-        !customerExists ||
-        !productExists
+        productList.length === 0
       ) {
         Alert.alert(
-          "Please fill in all customer details, ensure all products exist, and add at least one product"
+          "Please fill in all customer details and add at least one product"
         );
         return;
       }
 
-      const currentUser = auth.currentUser;
-      const userDoc = await db.collection("users").doc(currentUser.uid).get();
-      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+      // Check if the customer exists
+      console.log("Checking if customer exists...");
+      const trimmedCustomerName = customerName.trim();
+      const customerSnapshot = await db
+        .collection("customers")
+        .where("customerName", "==", trimmedCustomerName)
+        .get();
+      const customerExists = !customerSnapshot.empty;
 
-      if (!companyID) {
-        Alert.alert("Company ID not found for the current user");
+      console.log("Customer Exists:", customerExists);
+
+      if (!customerExists) {
+        Alert.alert(
+          "Customer does not exist",
+          "Do you want to add a new customer or edit the name?",
+          [
+            {
+              text: "Add Customer",
+              onPress: () => navigation.navigate("Customer"),
+            },
+            {
+              text: "Edit Name",
+              onPress: () => setCustomerName(""),
+            },
+          ]
+        );
         return;
       }
 
-      const generatedInvoiceNumber = await generateInvoiceNumber();
-
-      const invoiceData = {
-        invoiceNumber: generatedInvoiceNumber,
-        companyID,
-        customerName,
-        customerAddress,
-        phoneNumber: parseFloat(phoneNumber),
-        date,
-      };
-
-      await db
-        .collection("invoices")
-        .doc(generatedInvoiceNumber)
-        .set(invoiceData);
-
-      productList.forEach(async (product) => {
-        await db
-          .collection("invoices")
-          .doc(generatedInvoiceNumber)
+      // Check if all products exist
+      console.log("Checking if all products exist...");
+      const productExistencePromises = productList.map(async (product) => {
+        const productSnapshot = await db
           .collection("products")
-          .add({
-            productName: product.name,
-            productPrice: parseFloat(product.price),
-            quantity: parseFloat(product.quantity),
-          });
+          .where("productName", "==", product.name)
+          .get();
+        const productExists = !productSnapshot.empty;
+        console.log(`Product ${product.name} Exists:`, productExists);
+        return productExists;
       });
 
-      setCustomerName("");
-      setCustomerAddress("");
-      setPhoneNumber("");
-      setDate(new Date());
-      setProductList([{ name: "", price: "0.00", quantity: "0.00" }]);
-      setCustomerExists(true);
-      setProductExists(true);
+      const productsExist = await Promise.all(productExistencePromises);
+      console.log("Products Exist:", productsExist);
 
+      if (productsExist.includes(false)) {
+        Alert.alert("One or more products do not exist");
+        return;
+      }
+
+      console.log("Saving invoice details...");
+      const total = calculateTotal();
+
+      const invoiceData = {
+        invoiceNumber: invoiceNumber,
+        customerName,
+        customerAddress,
+        phoneNumber,
+        date,
+        productList,
+        total,
+      };
+      console.log("Invoice Data:", invoiceData);
+      console.log("Attempting to save invoice details...");
+
+      await db.collection("invoices").doc(invoiceNumber).set(invoiceData);
+
+      console.log("Invoice details saved successfully!");
       Alert.alert("Invoice details saved successfully!");
     } catch (error) {
       console.error("Error saving invoice details:", error);
@@ -265,7 +285,7 @@ const ScanScreen = ({ route, navigation }) => {
   };
 
   const addProduct = () => {
-    const newProduct = { name: "", price: "0.00", quantity: "0.00" };
+    const newProduct = { name: "", price: "", quantity: "" };
     setProductList([...productList, newProduct]);
   };
 
@@ -308,15 +328,12 @@ const ScanScreen = ({ route, navigation }) => {
             is24Hour={true}
             display="default"
             onChange={handleDateChange}
-            maximumDate={new Date()} // no future dates
+            maximumDate={new Date()}
           />
         )}
 
         <View style={styles.fieldContainer}>
-          <Text
-            style={{ color: customerNameStatus ? "green" : "red" }}
-            onPress={() => setExtractionMessage("Text extracted successfully!")}
-          >
+          <Text style={{ color: customerNameStatus ? "green" : "red" }}>
             {customerNameStatus ? "✓" : "✗"}
           </Text>
           <TextInput
@@ -331,10 +348,7 @@ const ScanScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.fieldContainer}>
-          <Text
-            style={{ color: customerAddressStatus ? "green" : "red" }}
-            onPress={() => setExtractionMessage("Text extracted successfully!")}
-          >
+          <Text style={{ color: customerAddressStatus ? "green" : "red" }}>
             {customerAddressStatus ? "✓" : "✗"}
           </Text>
           <TextInput
@@ -349,10 +363,7 @@ const ScanScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.fieldContainer}>
-          <Text
-            style={{ color: phoneNumberStatus ? "green" : "red" }}
-            onPress={() => setExtractionMessage("Text extracted successfully!")}
-          >
+          <Text style={{ color: phoneNumberStatus ? "green" : "red" }}>
             {phoneNumberStatus ? "✓" : "✗"}
           </Text>
           <TextInput
@@ -421,6 +432,20 @@ const ScanScreen = ({ route, navigation }) => {
         {!productExists && (
           <Text style={{ color: "red" }}>Product does not exist</Text>
         )}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Customer")}
+        >
+          <Text style={styles.text}>Add Customer</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Product")}
+        >
+          <Text style={styles.text}>Add Product</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
