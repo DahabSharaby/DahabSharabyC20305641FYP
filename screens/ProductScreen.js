@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
-import { db, auth } from '../firebase';
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Button, FlatList, Alert } from "react-native";
+import { db, auth } from "../firebase";
 
 const ProductScreen = () => {
-  const [action, setAction] = useState('');
-  const [productName, setProductName] = useState('');
-  const [productPrice, setProductPrice] = useState('');
-  const [productId, setProductId] = useState('');
+  const [action, setAction] = useState("");
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState(0);
+  const [productId, setProductId] = useState("");
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productSold, setProductSold] = useState(0);
 
   useEffect(() => {
-    const unsubscribe = db.collection('products').onSnapshot((snapshot) => {
+    const unsubscribe = db.collection("products").onSnapshot((snapshot) => {
       const productDatas = [];
       snapshot.forEach((doc) => {
         productDatas.push({ id: doc.id, ...doc.data() });
@@ -27,20 +28,20 @@ const ProductScreen = () => {
       const currentUser = auth.currentUser;
 
       if (currentUser) {
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
           return userData.companyID;
         } else {
-          console.error('User document not found.');
+          console.error("User document not found.");
           return null;
         }
       } else {
-        console.error('User not authenticated.');
+        console.error("User not authenticated.");
         return null;
       }
     } catch (error) {
-      console.error('Error getting user company ID:', error);
+      console.error("Error getting user company ID:", error);
       return null;
     }
   };
@@ -48,68 +49,77 @@ const ProductScreen = () => {
   const addProduct = async () => {
     try {
       const companyID = await getCurrentUserCompanyID();
-      await db.collection('products').add({
+      await db.collection("products").add({
         companyID,
         productName,
         productPrice,
         productId,
+        // productSold,
       });
 
-      Alert.alert('Product Added', 'Product has been added successfully.');
-      setAction('');
-      setProductName('');
-      setProductPrice('');
-      setProductId('');
+      Alert.alert("Product Added", "Product has been added successfully.");
+      setAction("");
+      setProductName("");
+      setProductPrice(0);
+      setProductId("");
+      // setProductSold(0);
     } catch (error) {
-      console.error('Error adding product:', error);
+      console.error("Error adding product:", error);
     }
   };
 
   const editProduct = async () => {
     try {
       if (!selectedProduct) {
-        Alert.alert('Select a product to edit');
+        Alert.alert("Select a product to edit");
         return;
       }
 
       const companyID = await getCurrentUserCompanyID();
-      await db.collection('products').doc(selectedProduct.id).update({
-        companyID,
-        productName: productName || selectedProduct.productName,
-        productPrice: productPrice || selectedProduct.productPrice,
-        productId: productId || selectedProduct.productId,
-      });
+      await db
+        .collection("products")
+        .doc(selectedProduct.id)
+        .update({
+          companyID,
+          productName: productName || selectedProduct.productName,
+          productPrice: productPrice || selectedProduct.productPrice,
+          productId: productId || selectedProduct.productId,
+          productSold: productSold || selectedProduct.productSold,
+        });
 
-      Alert.alert('Product Edited', 'Product has been edited successfully.');
-      setAction('');
-      setProductName('');
-      setProductPrice('');
-      setProductId('');
+      Alert.alert("Product Edited", "Product has been edited successfully.");
+      setAction("");
+      setProductName("");
+      setProductPrice(0);
+      setProductId("");
+      // setProductSold(0);
       setSelectedProduct(null);
     } catch (error) {
-      console.error('Error editing product:', error);
+      console.error("Error editing product:", error);
     }
   };
 
   const deleteProduct = async () => {
     try {
       if (!selectedProduct) {
-        Alert.alert('Select a product to delete');
+        Alert.alert("Select a product to delete");
         return;
       }
 
-      await db.collection('products').doc(selectedProduct.id).delete();
-      Alert.alert('Product Deleted', 'Product has been deleted successfully.');
+      await db.collection("products").doc(selectedProduct.id).delete();
+      Alert.alert("Product Deleted", "Product has been deleted successfully.");
 
-      setProducts(prevProducts => prevProducts.filter(product => product.id !== selectedProduct.id));
+      setProducts((prevProducts) =>
+        prevProducts.filter((product) => product.id !== selectedProduct.id)
+      );
 
-      setAction('');
-      setProductName('');
-      setProductPrice('');
-      setProductId('');
+      setAction("");
+      setProductName("");
+      setProductPrice("");
+      setProductId("");
       setSelectedProduct(null);
     } catch (error) {
-      console.error('Error deleting product:', error);
+      console.error("Error deleting product:", error);
     }
   };
 
@@ -121,16 +131,44 @@ const ProductScreen = () => {
         value={productName}
         onChangeText={(text) => setProductName(text)}
       />
-      <TextInput
+      {/* <TextInput
         placeholder="Product Price"
         value={productPrice}
         onChangeText={(text) => setProductPrice(text)}
+        keyboardType="numeric"
+      /> */}
+      <TextInput
+        placeholder="Product Price"
+        value={productPrice !== null ? productPrice.toString() : ""}
+        onChangeText={(text) => {
+          const numericValue = parseFloat(text);
+          setProductPrice(isNaN(numericValue) ? null : numericValue);
+        }}
+        keyboardType="decimal-pad"
       />
+
       <TextInput
         placeholder="Product ID"
         value={productId}
         onChangeText={(text) => setProductId(text)}
       />
+
+      {/* <TextInput
+        value={String(productSold)}
+        placeholder="Sold Stock"
+        onChangeText={(text) => setProductSold(text)}
+        keyboardType="numeric"
+      /> */}
+      {/* <TextInput
+        value={productSold !== null ? String(productSold) : ""}
+        placeholder="Sold Stock"
+        onChangeText={(text) => {
+          const numericValue = parseFloat(text);
+          setProductSold(isNaN(numericValue) ? null : numericValue);
+        }}
+        keyboardType="numeric"
+      /> */}
+
       <Button title="Add Product" onPress={addProduct} />
 
       <Text style={{ marginTop: 20 }}>Product List:</Text>
@@ -138,8 +176,16 @@ const ProductScreen = () => {
         data={products}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-            <Text>{`${item.productName} - ${item.productPrice} - ${item.productId}`}</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 10,
+            }}
+          >
+            {/* - ${item.productSold} */}
+            <Text>{`${item.productName} - ${item.productPrice} - ${item.productId}  `}</Text>
             <Button title="Edit" onPress={() => setSelectedProduct(item)} />
           </View>
         )}
@@ -163,6 +209,12 @@ const ProductScreen = () => {
             value={productId || selectedProduct.productId}
             onChangeText={(text) => setProductId(text)}
           />
+
+          {/* <TextInput
+            placeholder="Sold Stock"
+            value={productSold || selectedProduct.productSold}
+            onChangeText={(text) => setProductSold(text)}
+          /> */}
           <Button title="Save Changes" onPress={editProduct} />
         </>
       )}
