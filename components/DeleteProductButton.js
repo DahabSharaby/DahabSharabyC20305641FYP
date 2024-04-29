@@ -1,14 +1,13 @@
-import { StyleSheet, View, Button } from "react-native";
+import { StyleSheet, View, TouchableOpacity } from "react-native";
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 const DeleteProductButton = ({ index, onDelete }) => {
   return (
-    <View>
-      <Button title="deleteButton" onPress={() => onDelete(index)}>
-        <FontAwesomeIcon icon={faTrash} size={20} style={styles.icon} />
-      </Button>
+    <View style={styles.container}>
+      <TouchableOpacity onPress={() => onDelete(index)}>
+        <Ionicons name="trash-outline" size={24} color="red" />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -16,10 +15,11 @@ const DeleteProductButton = ({ index, onDelete }) => {
 export default DeleteProductButton;
 
 const styles = StyleSheet.create({
-  icon: {
-    color: "red",
+  container: {
+    flex: 1,
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
+    marginRight: 10,
+    marginTop: 10,
   },
 });
-
-// 1. Scan screen pass to the DeleteProductButton a prop called index= products index.
-// 2. deletebutton file take that prop index and use it in the handleDelete props.index  passing data by prop

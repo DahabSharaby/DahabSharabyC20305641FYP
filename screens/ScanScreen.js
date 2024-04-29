@@ -13,7 +13,9 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import axios from "axios";
-import { db } from "../firebase";
+import firebase from "firebase/compat";
+import { db, auth } from "../firebase";
+import "firebase/compat/storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import DeleteProductButton from "../components/DeleteProductButton";
 import { useNavigation } from "@react-navigation/native";
@@ -158,7 +160,7 @@ const ScanScreen = ({ route }) => {
     for (const line of lines) {
       const parts = line.split(",");
       if (parts.length === 3) {
-        const name = parts[0].replace(/^\d+\.\s*/, "").trim(); // Trim the product name
+        const name = parts[0].replace(/^\d+\.\s*/, "").trim();
         const price = parseFloat(parts[1].replace("€", ""));
         const quantity = parseFloat(parts[2].trim());
         items.push({ name, price, quantity });
@@ -169,32 +171,35 @@ const ScanScreen = ({ route }) => {
 
   const handleSaveInvoice = async () => {
     try {
-      console.log("Starting handleSaveInvoice...");
-
-      // Check if all required fields are filled
-      console.log("Checking required fields...");
       if (
         customerName.trim() === "" ||
         customerAddress.trim() === "" ||
         phoneNumber.trim() === "" ||
-        productList.length === 0
+        productList.length === 0 ||
+        !imageUri
       ) {
         Alert.alert(
-          "Please fill in all customer details and add at least one product"
+          "Please fill in all customer details, add at least one product, and capture/select an image"
         );
         return;
       }
 
+      // Upload the image to Firebase Storage
+      const imageFileName = `invoice_${Date.now()}.jpg`;
+      const storageRef = firebase.storage().ref(`invoices/${imageFileName}`);
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      await storageRef.put(blob);
+
+      const downloadURL = await storageRef.getDownloadURL();
+
       // Check if the customer exists
-      console.log("Checking if customer exists...");
       const trimmedCustomerName = customerName.trim();
       const customerSnapshot = await db
         .collection("customers")
         .where("customerName", "==", trimmedCustomerName)
         .get();
       const customerExists = !customerSnapshot.empty;
-
-      console.log("Customer Exists:", customerExists);
 
       if (!customerExists) {
         Alert.alert(
@@ -215,44 +220,61 @@ const ScanScreen = ({ route }) => {
       }
 
       // Check if all products exist
-      console.log("Checking if all products exist...");
       const productExistencePromises = productList.map(async (product) => {
         const productSnapshot = await db
           .collection("products")
           .where("productName", "==", product.name)
           .get();
         const productExists = !productSnapshot.empty;
-        console.log(`Product ${product.name} Exists:`, productExists);
         return productExists;
       });
 
       const productsExist = await Promise.all(productExistencePromises);
-      console.log("Products Exist:", productsExist);
 
       if (productsExist.includes(false)) {
         Alert.alert("One or more products do not exist");
         return;
       }
 
-      console.log("Saving invoice details...");
       const total = calculateTotal();
+      const currentUser = auth.currentUser;
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        Alert.alert("Company ID not found for the current user.");
+        return;
+      }
 
       const invoiceData = {
         invoiceNumber: invoiceNumber,
+        companyID: companyID,
         customerName,
         customerAddress,
         phoneNumber,
         date,
         productList,
         total,
+        imageURL: downloadURL,
       };
-      console.log("Invoice Data:", invoiceData);
-      console.log("Attempting to save invoice details...");
 
       await db.collection("invoices").doc(invoiceNumber).set(invoiceData);
+      Alert.alert("Invoice details saved successfully!", "", [
+        {
+          text: "OK",
+          onPress: () => {
+            setCustomerName("");
+            setCustomerAddress("");
+            setPhoneNumber("");
+            setDate(new Date());
+            setProductList([]);
+            setInvoiceNumber("");
+            setImageUri(null);
 
-      console.log("Invoice details saved successfully!");
-      Alert.alert("Invoice details saved successfully!");
+            navigation.navigate("Main");
+          },
+        },
+      ]);
     } catch (error) {
       console.error("Error saving invoice details:", error);
       Alert.alert("Failed to save invoice details.");
@@ -300,7 +322,7 @@ const ScanScreen = ({ route }) => {
     productList.forEach((product) => {
       total += product.price * product.quantity;
     });
-    return total.toFixed(2); // Round to 2 decimal places
+    return total.toFixed(2);
   };
 
   const handleDeleteProduct = (index) => {
@@ -424,14 +446,6 @@ const ScanScreen = ({ route }) => {
         </TouchableOpacity>
 
         <Text style={styles.label}>Total: {calculateTotal()}</Text>
-
-        {!customerExists && (
-          <Text style={{ color: "red" }}>Customer does not exist</Text>
-        )}
-
-        {!productExists && (
-          <Text style={{ color: "red" }}>Product does not exist</Text>
-        )}
 
         <TouchableOpacity
           style={styles.button}
