@@ -447,14 +447,6 @@ const ScanScreen = ({ route }) => {
 
         <Text style={styles.label}>Total: {calculateTotal()}</Text>
 
-        {!customerExists && (
-          <Text style={{ color: "red" }}>Customer does not exist</Text>
-        )}
-
-        {!productExists && (
-          <Text style={{ color: "red" }}>Product does not exist</Text>
-        )}
-
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("Customer")}
