@@ -106,69 +106,77 @@ const MainScreen = ({ navigation }) => {
       }
     };
 
-    fetchTotalSales();
-    fetchNumOrders();
-    fetchTopCustomer();
-    fetchLatestInvoices();
-    fetchSalesData();
-  }, []);
-
-  const fetchSalesData = async () => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error("Current user not found.");
-      }
-
-      console.log("Fetching user data...");
-      const userDoc = await db.collection("users").doc(currentUser.uid).get();
-      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
-
-      if (!companyID) {
-        throw new Error("Company ID not found for the current user.");
-      }
-
-      console.log("Fetching sales data...");
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setFullYear(endDate.getFullYear() - 1);
-
-      const salesSnapshot = await db
-        .collection("invoices")
-        .where("companyID", "==", companyID)
-        .where("date", ">=", startDate)
-        .where("date", "<=", endDate)
-        .orderBy("date")
-        .get();
-
-      const sales = {};
-      salesSnapshot.forEach((doc) => {
-        const saleData = doc.data();
-        const date = saleData.date
-          .toDate()
-          .toLocaleDateString("en-US", { month: "short" });
-        const total = parseFloat(saleData.total);
-        if (!isNaN(total)) {
-          if (date in sales) {
-            sales[date] += total;
-          } else {
-            sales[date] = total;
-          }
+    const fetchSalesData = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
         }
-      });
 
-      console.log("Sales data fetched:", sales);
-      const formattedSalesData = Object.entries(sales).map(([date, total]) => ({
-        date,
-        total: total.toFixed(2),
-      }));
+        console.log("Fetching user data...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
 
-      console.log("Formatted sales data:", formattedSalesData);
-      setSalesData(formattedSalesData);
-    } catch (error) {
-      console.error("Error fetching sales data:", error);
-    }
-  };
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        console.log("Fetching sales data...");
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setFullYear(endDate.getFullYear() - 1);
+
+        const salesSnapshot = await db
+          .collection("invoices")
+          .where("companyID", "==", companyID)
+          .where("date", ">=", startDate)
+          .where("date", "<=", endDate)
+          .orderBy("date")
+          .get();
+
+        const sales = {};
+        salesSnapshot.forEach((doc) => {
+          const saleData = doc.data();
+          const date = saleData.date
+            .toDate()
+            .toLocaleDateString("en-US", { month: "short" });
+          const total = parseFloat(saleData.total);
+          if (!isNaN(total)) {
+            if (date in sales) {
+              sales[date] += total;
+            } else {
+              sales[date] = total;
+            }
+          }
+        });
+
+        console.log("Sales data fetched:", sales);
+        const formattedSalesData = Object.entries(sales).map(
+          ([date, total]) => ({
+            date,
+            total: total.toFixed(2),
+          })
+        );
+
+        console.log("Formatted sales data:", formattedSalesData);
+        setSalesData(formattedSalesData);
+      } catch (error) {
+        console.error("Error fetching sales data:", error);
+      }
+    };
+
+    // Subscribe to real-time updates on the invoices collection
+    const unsubscribe = db.collection("invoices").onSnapshot(() => {
+      fetchTotalSales();
+      fetchNumOrders();
+      fetchTopCustomer();
+      fetchLatestInvoices();
+      fetchSalesData();
+    });
+
+    // Unsubscribe from real-time updates when component unmounts
+    return () => unsubscribe();
+  }, []);
 
   const navigateToProfile = () => {
     navigation.navigate("Profile");
