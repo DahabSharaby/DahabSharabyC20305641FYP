@@ -170,6 +170,10 @@ const MainScreen = ({ navigation }) => {
     }
   };
 
+  const navigateToProfile = () => {
+    navigation.navigate("Profile");
+  };
+
   const signOutUser = () => {
     auth.signOut().then(() => {
       navigation.replace("Welcome");
@@ -183,6 +187,14 @@ const MainScreen = ({ navigation }) => {
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
       <StatusBar style="light" />
+
+      {/* Profile Icon */}
+      <TouchableOpacity
+        style={styles.profileButton}
+        onPress={() => navigation.navigate("ProfileScreen")}
+      >
+        <Ionicons name="person-circle-outline" size={32} color="black" />
+      </TouchableOpacity>
 
       {/* Menu Button */}
       <TouchableOpacity
@@ -291,7 +303,7 @@ const MainScreen = ({ navigation }) => {
               />
               <MenuItem
                 iconName="ios-document-outline"
-                text="Invoice Screen"
+                text="Invoice"
                 onPress={() => navigation.navigate("InvoiceScreen")}
               />
               <MenuItem
@@ -436,6 +448,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     color: "black",
     fontWeight: "bold",
+  },
+  profileButton: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 999,
   },
 });
 

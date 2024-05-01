@@ -17,6 +17,7 @@ import CompanyReg from "./screens/CompanyReg.js";
 import ScanScreen from "./screens/ScanScreen.js";
 import InvoiceScreen from "./screens/InvoiceScreen.js";
 import InvoiceDetail from "./screens/InvoiceDetail.js";
+import ProfileScreen from "./screens/ProfileScreen.js";
 
 const Stack = createNativeStackNavigator();
 
@@ -39,6 +40,7 @@ export default function App() {
         <Stack.Screen name="ScanScreen" component={ScanScreen} />
         <Stack.Screen name="InvoiceScreen" component={InvoiceScreen} />
         <Stack.Screen name="InvoiceDetail" component={InvoiceDetail} />
+        <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
