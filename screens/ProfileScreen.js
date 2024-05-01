@@ -2,15 +2,12 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { auth, db } from "../firebase";
 import { Feather } from "@expo/vector-icons";
-import { sha256 } from "js-sha256";
 
 const ProfileScreen = () => {
   const [userData, setUserData] = useState(null);
   const [companyData, setCompanyData] = useState(null);
   const [editName, setEditName] = useState(false);
-  const [editEmail, setEditEmail] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -54,34 +51,9 @@ const ProfileScreen = () => {
     fetchUserData();
   }, []);
 
-  const handleEditUserInfo = async () => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error("User not authenticated.");
-      }
+  const handleEditUserInfo = async () => {};
 
-      if (newName.trim() === "" || newEmail.trim() === "") {
-        Alert.alert("Error", "Name and email cannot be empty.");
-        return;
-      }
-
-      await db.collection("users").doc(currentUser.uid).update({
-        usersName: newName,
-        usersEmail: newEmail,
-      });
-      Alert.alert("Success", "User information updated successfully.");
-    } catch (error) {
-      console.error("Error updating user information:", error);
-      Alert.alert(
-        "Error",
-        "Failed to update user information. Please try again later."
-      );
-    }
-  };
-
-  // Hashing the password before displaying
-  const hashedPassword = userData ? sha256(userData.usersPassword) : "";
+  const hiddenPassword = "********";
 
   return (
     <View style={styles.container}>
@@ -103,8 +75,8 @@ const ProfileScreen = () => {
           <Text style={styles.value}>{userData.usersNumber}</Text>
           <Text style={styles.label}>Company ID:</Text>
           <Text style={styles.value}>{userData.companyID}</Text>
-          <Text style={styles.label}>Password (Hashed):</Text>
-          <Text style={styles.value}>{hashedPassword}</Text>
+          <Text style={styles.label}>Password:</Text>
+          <Text style={styles.value}>{hiddenPassword}</Text>
         </View>
       )}
       {companyData && (
