@@ -191,6 +191,9 @@ const MainScreen = ({ navigation }) => {
   const toggleMenu = () => {
     setIsMenuVisible(!isMenuVisible);
   };
+  const navigateToUploadScreen = () => {
+    navigation.navigate("UploadScreen");
+  };
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
@@ -210,6 +213,11 @@ const MainScreen = ({ navigation }) => {
         onPress={() => setIsMenuVisible(true)}
       >
         <Ionicons name="menu" size={32} color="black" />
+      </TouchableOpacity>
+
+      {/* Button to navigate to Upload screen */}
+      <TouchableOpacity onPress={navigateToUploadScreen}>
+        <Text>Go to Upload Screen</Text>
       </TouchableOpacity>
 
       <View style={styles.additionalContentContainer}>

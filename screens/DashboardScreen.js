@@ -383,8 +383,9 @@ const DashboardScreen = () => {
         <Text style={styles.chartTitle}>Top Customers</Text>
         <PieChart
           data={topCustomersData.map((customer, index) => ({
-            name: `${customer.customerName} (${customer.percentage}%)`,
-            amount: parseInt(customer.percentage),
+            name: customer.customerName,
+            percentage: parseFloat(customer.percentage),
+            label: `${customer.percentage}%`,
             color: `#${index + 1}${index + 2}${index + 3}`,
           }))}
           width={Dimensions.get("window").width - 16}
@@ -403,7 +404,7 @@ const DashboardScreen = () => {
               fontSize: 10,
             },
           }}
-          accessor="amount"
+          accessor="percentage"
           backgroundColor="transparent"
           paddingLeft="15"
           absolute
