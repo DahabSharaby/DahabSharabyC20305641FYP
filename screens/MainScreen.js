@@ -12,7 +12,7 @@ import { auth, db } from "../firebase";
 import { KeyboardAvoidingView } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { LineChart } from "react-native-chart-kit";
+import { BarChart } from "react-native-chart-kit";
 
 const MainScreen = ({ navigation }) => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -21,6 +21,9 @@ const MainScreen = ({ navigation }) => {
   const [topCustomer, setTopCustomer] = useState("");
   const [latestInvoices, setLatestInvoices] = useState([]);
   const [salesData, setSalesData] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [numInvoicesForMonth, setNumInvoicesForMonth] = useState(0);
+  const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchTotalSales = async () => {
@@ -143,18 +146,21 @@ const MainScreen = ({ navigation }) => {
           const total = parseFloat(saleData.total);
           if (!isNaN(total)) {
             if (date in sales) {
-              sales[date] += total;
+              sales[date].push(saleData);
             } else {
-              sales[date] = total;
+              sales[date] = [saleData];
             }
           }
         });
 
         console.log("Sales data fetched:", sales);
         const formattedSalesData = Object.entries(sales).map(
-          ([date, total]) => ({
+          ([date, invoices]) => ({
             date,
-            total: total.toFixed(2),
+            total: invoices
+              .reduce((acc, curr) => acc + parseFloat(curr.total), 0)
+              .toFixed(2),
+            numInvoices: invoices.length,
           })
         );
 
@@ -165,7 +171,6 @@ const MainScreen = ({ navigation }) => {
       }
     };
 
-    // Subscribe to real-time updates on the invoices collection
     const unsubscribe = db.collection("invoices").onSnapshot(() => {
       fetchTotalSales();
       fetchNumOrders();
@@ -174,12 +179,11 @@ const MainScreen = ({ navigation }) => {
       fetchSalesData();
     });
 
-    // Unsubscribe from real-time updates when component unmounts
     return () => unsubscribe();
   }, []);
 
   const navigateToProfile = () => {
-    navigation.navigate("Profile");
+    navigation.navigate("ProfileScreen");
   };
 
   const signOutUser = () => {
@@ -188,12 +192,35 @@ const MainScreen = ({ navigation }) => {
     });
   };
 
+  const handleMenuItemPress = (screen) => {
+    navigation.navigate(screen);
+    setIsMenuVisible(false);
+  };
+
   const toggleMenu = () => {
     setIsMenuVisible(!isMenuVisible);
   };
-  const navigateToUploadScreen = () => {
-    navigation.navigate("UploadScreen");
-  };
+
+  const renderInvoiceModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isInvoiceModalVisible}
+      onRequestClose={() => setIsInvoiceModalVisible(false)}
+    >
+      <TouchableOpacity
+        style={styles.modalBackground}
+        onPress={() => setIsInvoiceModalVisible(false)}
+      >
+        <View style={styles.invoiceModalContainer}>
+          <Text style={styles.invoiceModalTitle}>{selectedMonth}</Text>
+          <Text style={styles.invoiceModalContent}>
+            Number of Invoices: {numInvoicesForMonth}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
@@ -202,29 +229,21 @@ const MainScreen = ({ navigation }) => {
       {/* Profile Icon */}
       <TouchableOpacity
         style={styles.profileButton}
-        onPress={() => navigation.navigate("ProfileScreen")}
+        onPress={navigateToProfile}
       >
         <Ionicons name="person-circle-outline" size={32} color="black" />
       </TouchableOpacity>
 
       {/* Menu Button */}
-      <TouchableOpacity
-        style={styles.menuButton}
-        onPress={() => setIsMenuVisible(true)}
-      >
+      <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
         <Ionicons name="menu" size={32} color="black" />
-      </TouchableOpacity>
-
-      {/* Button to navigate to Upload screen */}
-      <TouchableOpacity onPress={navigateToUploadScreen}>
-        <Text>Go to Upload Screen</Text>
       </TouchableOpacity>
 
       <View style={styles.additionalContentContainer}>
         {salesData.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Total Sales Line Chart</Text>
-            <LineChart
+            <Text style={styles.chartTitle}>Total Sales Pre Month</Text>
+            <BarChart
               data={{
                 labels: salesData.map((data) => data.date),
                 datasets: [
@@ -239,23 +258,24 @@ const MainScreen = ({ navigation }) => {
               yAxisSuffix=""
               yAxisInterval={1}
               chartConfig={{
-                backgroundColor: "#e26a00",
-                backgroundGradientFrom: "#fb8c00",
-                backgroundGradientTo: "#ffa726",
-                decimalPlaces: 2,
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                backgroundColor: "white",
+                backgroundGradientFrom: "white",
+                backgroundGradientTo: "white",
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                 style: {
                   borderRadius: 16,
                 },
-                propsForDots: {
-                  r: "6",
-                  strokeWidth: "2",
-                  stroke: "#ffa726",
-                },
               }}
-              bezier
               style={styles.chart}
+              onPress={(event, chartData) => {
+                const { index } = chartData;
+                const selectedDate = salesData[index]?.date;
+                const numInvoices = salesData[index]?.numInvoices;
+                setSelectedMonth(selectedDate);
+                setNumInvoicesForMonth(numInvoices);
+                setIsInvoiceModalVisible(true);
+              }}
             />
           </View>
         )}
@@ -271,10 +291,12 @@ const MainScreen = ({ navigation }) => {
         <View style={styles.latestInvoicesContainer}>
           <Text style={styles.latestInvoicesTitle}>Latest Invoices</Text>
           {latestInvoices.map((invoice, index) => (
-            <Text key={index} style={styles.invoiceItem}>
-              Invoice: {invoice.number}, Customer: {invoice.customerName},
-              Total: €{invoice.total}
-            </Text>
+            <View key={index} style={styles.invoiceItem}>
+              <Text style={styles.invoiceText}>
+                {invoice.number}, Customer: {invoice.customerName}, Total: €
+                {invoice.total}
+              </Text>
+            </View>
           ))}
         </View>
       </View>
@@ -300,27 +322,32 @@ const MainScreen = ({ navigation }) => {
               <MenuItem
                 iconName="ios-barcode-outline"
                 text="Scanner"
-                onPress={() => navigation.navigate("Scanner")}
+                onPress={() => handleMenuItemPress("Scanner")}
               />
               <MenuItem
                 iconName="ios-create-outline"
                 text="Input"
-                onPress={() => navigation.navigate("Input")}
+                onPress={() => handleMenuItemPress("Input")}
               />
               <MenuItem
                 iconName="ios-analytics-outline"
                 text="Dashboard"
-                onPress={() => navigation.navigate("Dashboard")}
+                onPress={() => handleMenuItemPress("Dashboard")}
+              />
+              <MenuItem
+                iconName="ios-cloud-upload-outline"
+                text="Forecasting"
+                onPress={() => handleMenuItemPress("UploadScreen")}
               />
               <MenuItem
                 iconName="ios-people-outline"
                 text="Admin"
-                onPress={() => navigation.navigate("Admin")}
+                onPress={() => handleMenuItemPress("Admin")}
               />
               <MenuItem
                 iconName="ios-document-outline"
                 text="Invoice"
-                onPress={() => navigation.navigate("InvoiceScreen")}
+                onPress={() => handleMenuItemPress("InvoiceScreen")}
               />
               <MenuItem
                 iconName="ios-log-out-outline"
@@ -331,6 +358,8 @@ const MainScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {renderInvoiceModal()}
     </KeyboardAvoidingView>
   );
 };
@@ -383,6 +412,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 20,
+    color: "black",
   },
   chartContainer: {
     marginBottom: 20,
@@ -397,31 +427,40 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   salesInfoCard: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "black",
     borderRadius: 10,
     padding: 10,
     width: "30%",
+    marginBottom: 20,
   },
   salesInfoTitle: {
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 5,
+    color: "white",
   },
   salesInfoValue: {
     fontSize: 14,
+    color: "white",
   },
   latestInvoicesContainer: {
-    width: "50%",
+    marginTop: 20,
   },
   latestInvoicesTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
+    color: "black",
   },
   invoiceItem: {
+    backgroundColor: "black",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  invoiceText: {
     fontSize: 14,
-    width: "50%",
-    flexDirection: "row",
+    color: "white",
   },
   modalBackground: {
     flex: 1,
@@ -470,6 +509,21 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
     zIndex: 999,
+  },
+  invoiceModalContainer: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+  },
+  invoiceModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "black",
+  },
+  invoiceModalContent: {
+    fontSize: 16,
+    color: "black",
   },
 });
 
