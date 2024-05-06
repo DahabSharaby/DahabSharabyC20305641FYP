@@ -179,7 +179,7 @@ const ScanScreen = ({ route }) => {
         !imageUri
       ) {
         Alert.alert(
-          "Please fill in all customer details, add at least one product, and capture/select an image"
+          "Please fill in all customer details, add at least one product"
         );
         return;
       }
@@ -220,19 +220,30 @@ const ScanScreen = ({ route }) => {
       }
 
       // Check if all products exist
-      const productExistencePromises = productList.map(async (product) => {
+      const nonExistentProducts = [];
+      for (const product of productList) {
         const productSnapshot = await db
           .collection("products")
           .where("productName", "==", product.name)
           .get();
-        const productExists = !productSnapshot.empty;
-        return productExists;
-      });
+        if (productSnapshot.empty) {
+          nonExistentProducts.push(product.name);
+        }
+      }
 
-      const productsExist = await Promise.all(productExistencePromises);
-
-      if (productsExist.includes(false)) {
-        Alert.alert("One or more products do not exist");
+      if (nonExistentProducts.length > 0) {
+        Alert.alert(
+          "One or more products do not exist",
+          `The following products do not exist in the database: ${nonExistentProducts.join(
+            ", "
+          )}`,
+          [
+            {
+              text: "OK",
+              onPress: () => {},
+            },
+          ]
+        );
         return;
       }
 
@@ -472,6 +483,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     width: "100%",
+    top: 40,
   },
   input: {
     borderWidth: 1,

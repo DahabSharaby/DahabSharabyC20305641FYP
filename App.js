@@ -19,6 +19,7 @@ import InvoiceScreen from "./screens/InvoiceScreen.js";
 import InvoiceDetail from "./screens/InvoiceDetail.js";
 import ProfileScreen from "./screens/ProfileScreen.js";
 import UploadScreen from "./screens/UploadScreen.js";
+import Payments from "./screens/Payments";
 
 const Stack = createNativeStackNavigator();
 
@@ -26,23 +27,96 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Company Registeration" component={CompanyReg} />
-        <Stack.Screen name="Main" component={MainScreen} />
-        <Stack.Screen name="Scanner" component={ScannerScreen} />
-        <Stack.Screen name="Input" component={InputScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="Admin" component={AdminScreen} />
-        <Stack.Screen name="Customer" component={CustomerScreen} />
-        <Stack.Screen name="Product" component={ProductScreen} />
-        <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-        <Stack.Screen name="ScanScreen" component={ScanScreen} />
-        <Stack.Screen name="InvoiceScreen" component={InvoiceScreen} />
-        <Stack.Screen name="InvoiceDetail" component={InvoiceDetail} />
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-        <Stack.Screen name="UploadScreen" component={UploadScreen} />
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Company Registeration"
+          component={CompanyReg}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Main"
+          component={MainScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Scanner"
+          component={ScannerScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Input"
+          component={InputScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Admin"
+          component={AdminScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Customer"
+          component={CustomerScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Product"
+          component={ProductScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="DeleteAccount"
+          component={DeleteAccountScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ScanScreen"
+          component={ScanScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="InvoiceScreen"
+          component={InvoiceScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="InvoiceDetail"
+          component={InvoiceDetail}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ProfileScreen"
+          component={ProfileScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="UploadScreen"
+          component={UploadScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Payments"
+          component={Payments}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

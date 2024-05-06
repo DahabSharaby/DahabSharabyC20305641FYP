@@ -15,6 +15,7 @@ const DashboardScreen = () => {
   const [salesData, setSalesData] = useState([]);
   const [topProductsData, setTopProductsData] = useState([]);
   const [topCustomersData, setTopCustomersData] = useState([]);
+  const [totalSalesByCustomerData, setTotalSalesByCustomerData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("31");
@@ -23,6 +24,7 @@ const DashboardScreen = () => {
     fetchSalesData(timeRange);
     fetchTopProducts(timeRange);
     fetchTopCustomers(timeRange);
+    fetchTotalSalesByCustomer(timeRange);
   }, [timeRange]);
 
   const fetchSalesData = async (range) => {
@@ -277,6 +279,88 @@ const DashboardScreen = () => {
     }
   };
 
+  const fetchTotalSalesByCustomer = async (range) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("Current user not found.");
+      }
+
+      console.log("Fetching user data...");
+      const userDoc = await db.collection("users").doc(currentUser.uid).get();
+      const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+      if (!companyID) {
+        throw new Error("Company ID not found for the current user.");
+      }
+
+      console.log("Fetching total sales by customer...");
+      const endDate = new Date();
+      const startDate = new Date();
+
+      switch (range) {
+        case "31":
+          startDate.setDate(endDate.getDate() - 31);
+          break;
+        case "183":
+          startDate.setMonth(endDate.getMonth() - 6);
+          break;
+        case "365":
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+        case "730":
+          startDate.setFullYear(endDate.getFullYear() - 2);
+          break;
+        case "1095":
+          startDate.setFullYear(endDate.getFullYear() - 3);
+          break;
+        default:
+          startDate.setDate(endDate.getDate() - 31);
+      }
+
+      const invoicesSnapshot = await db
+        .collection("invoices")
+        .where("companyID", "==", companyID)
+        .where("date", ">=", startDate)
+        .where("date", "<=", endDate)
+        .get();
+
+      const salesByCustomer = {};
+      invoicesSnapshot.forEach((doc) => {
+        const customerName = doc.data().customerName.trim();
+        const total = parseFloat(doc.data().total);
+        if (!isNaN(total)) {
+          if (customerName in salesByCustomer) {
+            salesByCustomer[customerName] += total;
+          } else {
+            salesByCustomer[customerName] = total;
+          }
+        }
+      });
+
+      console.log("Total sales by customer data fetched:", salesByCustomer);
+      const formattedSalesByCustomerData = Object.entries(salesByCustomer).map(
+        ([customerName, totalSales]) => ({
+          customerName,
+          totalSales: totalSales.toFixed(2),
+        })
+      );
+
+      console.log(
+        "Formatted total sales by customer data:",
+        formattedSalesByCustomerData
+      );
+      setTotalSalesByCustomerData(formattedSalesByCustomerData);
+    } catch (error) {
+      console.error("Error fetching total sales by customer:", error);
+      setError(
+        "Failed to fetch total sales by customer. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -292,6 +376,23 @@ const DashboardScreen = () => {
       </View>
     );
   }
+  const pieChartColors = [
+    "#FF5733", // Red
+    "#FFD700", // Gold
+    "#00FF00", // Lime
+    "#00CED1", // Dark Turquoise
+    "#8A2BE2", // Blue Violet
+    "#FF69B4", // Hot Pink
+    "#FF4500", // Orange Red
+    "#7FFF00", // Chartreuse
+    "#20B2AA", // Light Sea Green
+    "#FF1493", // Deep Pink
+    "#00BFFF", // Deep Sky Blue
+    "#ADFF2F", // Green Yellow
+    "#4682B4", // Steel Blue
+    "#FF8C00", // Dark Orange
+    "#9400D3", // Dark Violet
+  ];
 
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -320,22 +421,22 @@ const DashboardScreen = () => {
           verticalLabelRotation={90}
           width={Dimensions.get("window").width}
           height={420}
-          yAxisSuffix=" €"
+          yAxisSuffix="€"
           yAxisInterval={1}
           chartConfig={{
-            backgroundColor: "#e26a00",
-            backgroundGradientFrom: "#fb8c00",
-            backgroundGradientTo: "#ffa726",
+            backgroundColor: "#f5f5f5",
+            backgroundGradientFrom: "#FFFFFF",
+            backgroundGradientTo: "#FFFFFF",
             decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+            color: (opacity = 1) => `rgba(53, 108, 173, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(53, 108, 173, ${opacity})`,
             style: {
               borderRadius: 16,
             },
             propsForDots: {
               r: "6",
               strokeWidth: "2",
-              stroke: "#ffa726",
+              stroke: "#3570AD",
             },
           }}
           bezier
@@ -344,6 +445,7 @@ const DashboardScreen = () => {
             borderRadius: 16,
           }}
         />
+
         <Text style={styles.chartTitle}>Top Selling Products</Text>
         <BarChart
           data={{
@@ -381,12 +483,13 @@ const DashboardScreen = () => {
           }}
         />
         <Text style={styles.chartTitle}>Top Customers</Text>
+
         <PieChart
           data={topCustomersData.map((customer, index) => ({
             name: customer.customerName,
-            percentage: parseFloat(customer.percentage),
-            label: `${customer.percentage}%`,
-            color: `#${index + 1}${index + 2}${index + 3}`,
+            percentage: parseInt(customer.percentage),
+            label: `${parseInt(customer.percentage)}%`,
+            color: pieChartColors[index % pieChartColors.length],
           }))}
           width={Dimensions.get("window").width - 16}
           height={220}
@@ -394,7 +497,6 @@ const DashboardScreen = () => {
             backgroundColor: "#e26a00",
             backgroundGradientFrom: "#fb8c00",
             backgroundGradientTo: "#ffa726",
-            decimalPlaces: 2,
             color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
             style: {
@@ -408,6 +510,61 @@ const DashboardScreen = () => {
           backgroundColor="transparent"
           paddingLeft="15"
           absolute
+          renderDecorator={({ x, y, dataEntry }) => {
+            return (
+              <Text
+                style={{
+                  position: "absolute",
+                  top: y - 20,
+                  left: x - 20,
+                  fontSize: 12,
+                  color: "white",
+                }}
+              >
+                {dataEntry.label}
+              </Text>
+            );
+          }}
+        />
+        <Text style={styles.chartTitle}>Total Sales by Customer</Text>
+        <BarChart
+          data={{
+            labels: totalSalesByCustomerData.map(
+              (customer) => customer.customerName
+            ),
+            datasets: [
+              {
+                data: totalSalesByCustomerData.map(
+                  (customer) => customer.totalSales
+                ),
+              },
+            ],
+          }}
+          width={Dimensions.get("window").width - 16}
+          height={220}
+          yAxisSuffix=" €"
+          yAxisInterval={1}
+          chartConfig={{
+            backgroundColor: "#8A2BE2",
+            backgroundGradientFrom: "#8A2BE2",
+            backgroundGradientTo: "#FF69B4",
+            decimalPlaces: 2,
+            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+            propsForDots: {
+              r: "6",
+              strokeWidth: "2",
+              stroke: "#ffa726",
+            },
+          }}
+          bezier
+          style={{
+            marginVertical: 8,
+            borderRadius: 16,
+          }}
         />
       </View>
     </ScrollView>
@@ -420,6 +577,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 20,
+    top: 40,
   },
   scrollViewContent: {
     flexGrow: 1,
