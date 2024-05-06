@@ -7,6 +7,7 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  Alert,
 } from "react-native";
 import { auth, db } from "../firebase";
 import { KeyboardAvoidingView } from "react-native";
@@ -24,6 +25,7 @@ const MainScreen = ({ navigation }) => {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [numInvoicesForMonth, setNumInvoicesForMonth] = useState(0);
   const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false);
+  const [unpaidInvoicesCount, setUnpaidInvoicesCount] = useState(0);
 
   useEffect(() => {
     const fetchTotalSales = async () => {
@@ -92,7 +94,7 @@ const MainScreen = ({ navigation }) => {
         const invoicesRef = db
           .collection("invoices")
           .orderBy("date", "desc")
-          .limit(5);
+          .limit(6);
         const snapshot = await invoicesRef.get();
         const invoices = [];
         snapshot.forEach((doc) => {
@@ -171,12 +173,49 @@ const MainScreen = ({ navigation }) => {
       }
     };
 
+    const fetchUnpaidInvoices = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching unpaid invoices...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const unpaidInvoicesSnapshot = await db
+          .collection("invoices")
+          .where("companyID", "==", companyID)
+          .where("status", "!=", "paid")
+          .get();
+
+        const unpaidInvoicesCount = unpaidInvoicesSnapshot.size;
+        setUnpaidInvoicesCount(unpaidInvoicesCount);
+
+        if (unpaidInvoicesCount > 0) {
+          Alert.alert(
+            "Unpaid Invoices Notification",
+            `You have ${unpaidInvoicesCount} unpaid invoices.`,
+            [{ text: "OK", onPress: () => console.log("OK Pressed") }]
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching unpaid invoices:", error);
+      }
+    };
+
     const unsubscribe = db.collection("invoices").onSnapshot(() => {
       fetchTotalSales();
       fetchNumOrders();
       fetchTopCustomer();
       fetchLatestInvoices();
       fetchSalesData();
+      fetchUnpaidInvoices();
     });
 
     return () => unsubscribe();
@@ -350,6 +389,11 @@ const MainScreen = ({ navigation }) => {
                 onPress={() => handleMenuItemPress("InvoiceScreen")}
               />
               <MenuItem
+                iconName="ios-card-outline"
+                text="Payments"
+                onPress={() => handleMenuItemPress("Payments")}
+              />
+              <MenuItem
                 iconName="ios-log-out-outline"
                 text="Sign Out"
                 onPress={signOutUser}
@@ -396,6 +440,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    top: 30,
   },
   menuButton: {
     position: "absolute",

@@ -1,113 +1,53 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Button,
-  Alert,
-  Text,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
+import React, { useState } from "react";
+import { Text, View, Button, Alert } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import * as Location from "expo-location";
-import XLSX from "xlsx";
+import * as XLSX from "xlsx";
 
-const UploadScreen = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [extractedData, setExtractedData] = useState([]);
-  const [error, setError] = useState(null);
+function UploadScreen() {
+  const [excelData, setExcelData] = useState(null);
 
-  useEffect(() => {
-    requestPermission();
-  }, []);
-
-  const requestPermission = async () => {
+  const handleFilePick = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        throw new Error("Permission to access media library is required!");
-      }
-    } catch (error) {
-      console.error("Error requesting permission:", error);
-      setError(error.message || "Unknown error occurred");
-    }
-  };
-
-  const parseExcelData = async (fileUri) => {
-    try {
-      const fileContent = await FileSystem.readAsStringAsync(fileUri);
-      const workbook = XLSX.read(fileContent, { type: "binary" });
-      const sheetNames = workbook.SheetNames;
-
-      const parsedData = sheetNames.map((sheetName) => {
-        const sheet = workbook.Sheets[sheetName];
-        const sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        return { sheetName, sheetData };
-      });
-
-      setExtractedData(parsedData);
-      setIsLoading(false);
-      Alert.alert("Success", "Data uploaded successfully!");
-    } catch (error) {
-      console.error("Error in parseExcelData:", error);
-      setError(error.message || "Unknown error occurred");
-      setIsLoading(false);
-    }
-  };
-
-  const handleUpload = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const result = await DocumentPicker.getDocumentAsync({
+      const document = await DocumentPicker.getDocumentAsync({
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
-      console.log("DocumentPicker result:", result);
-
-      if (result.type === "cancel") {
-        throw new Error("File selection canceled by user");
+      if (document.type === "success") {
+        const workbook = XLSX.read(document.uri, { type: "uri" });
+        const worksheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[worksheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+        setExcelData(data.slice(0, 10));
+      } else if (document.type === "cancel") {
+        console.log("Document picker cancelled by user");
+      } else {
+        Alert.alert("Error", "Failed to pick the document");
       }
-
-      const fileUri = result.assets[0].uri;
-
-      console.log("Parsed file URI:", fileUri);
-
-      await parseExcelData(fileUri);
     } catch (error) {
-      console.error("Error in handleUpload:", error);
-      setError(error.message || "Unknown error occurred");
-      setIsLoading(false);
+      console.error("Error picking file:", error);
+      Alert.alert(
+        "Error",
+        "Failed to pick the document. Please try again later."
+      );
     }
   };
 
   return (
     <View>
-      <Button
-        title="Upload Excel File"
-        onPress={handleUpload}
-        disabled={isLoading}
-      />
-
-      {isLoading && <ActivityIndicator size="large" color="#0000ff" />}
-
-      {error && <Text>Error: {error}</Text>}
-
-      <View style={{ marginTop: 20 }}>
-        {extractedData.map((sheet, index) => (
-          <View key={index}>
-            <Text>Sheet Name: {sheet.sheetName}</Text>
-            <FlatList
-              data={sheet.sheetData}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => <Text>{JSON.stringify(item)}</Text>}
-            />
-          </View>
-        ))}
-      </View>
+      <Text>Upload Screen</Text>
+      <Button title="Pick Excel File" onPress={handleFilePick} />
+      {excelData && (
+        <View>
+          <Text>Uploaded Data:</Text>
+          <ul>
+            {excelData.map((item, index) => (
+              <Text key={index}>{JSON.stringify(item)}</Text>
+            ))}
+          </ul>
+        </View>
+      )}
     </View>
   );
-};
+}
 
 export default UploadScreen;

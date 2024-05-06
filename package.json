@@ -20,6 +20,8 @@
     "@mui/styled-engine-sc": "^6.0.0-alpha.16",
     "@react-native-community/datetimepicker": "7.2.0",
     "@react-native-community/masked-view": "^0.1.11",
+    "@react-native-firebase/app": "^19.2.2",
+    "@react-native-firebase/messaging": "^19.2.2",
     "@react-native-picker/picker": "2.4.10",
     "@react-navigation/drawer": "^6.6.15",
     "@react-navigation/native": "^6.1.17",

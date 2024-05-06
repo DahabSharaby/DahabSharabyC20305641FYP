@@ -179,6 +179,7 @@ export function InputScreen({ navigation }) {
         date: selectedDate,
         productList,
         total: calculateTotal(),
+        status: "unpaid", // Set "unpaid"
       };
 
       await db.collection("invoices").doc(invoiceNumber).set(invoiceData);
@@ -371,6 +372,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 10,
+    top: 40,
   },
   input: {
     borderWidth: 1,
