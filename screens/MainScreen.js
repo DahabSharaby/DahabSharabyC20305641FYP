@@ -30,7 +30,22 @@ const MainScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchTotalSales = async () => {
       try {
-        const salesRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching total sales...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const salesRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await salesRef.get();
         let total = 0;
         snapshot.forEach((doc) => {
@@ -48,7 +63,22 @@ const MainScreen = ({ navigation }) => {
 
     const fetchNumOrders = async () => {
       try {
-        const ordersRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching number of orders...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const ordersRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await ordersRef.get();
         setNumOrders(snapshot.size);
         console.log("Number of Orders:", snapshot.size);
@@ -59,7 +89,22 @@ const MainScreen = ({ navigation }) => {
 
     const fetchTopCustomer = async () => {
       try {
-        const customersRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching top customer...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const customersRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await customersRef.get();
 
         const customerInvoicesCount = {};
@@ -91,10 +136,25 @@ const MainScreen = ({ navigation }) => {
 
     const fetchLatestInvoices = async () => {
       try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching latest invoices...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
         const invoicesRef = db
           .collection("invoices")
+          .where("companyID", "==", companyID)
           .orderBy("date", "desc")
           .limit(6);
+
         const snapshot = await invoicesRef.get();
         const invoices = [];
         snapshot.forEach((doc) => {
