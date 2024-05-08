@@ -270,71 +270,6 @@ const MainScreen = ({ navigation }) => {
       }
     };
 
-    const fetchExpensesData = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          throw new Error("Current user not found.");
-        }
-
-        console.log("Fetching expenses data...");
-        const userDoc = await db.collection("users").doc(currentUser.uid).get();
-        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
-
-        if (!companyID) {
-          throw new Error("Company ID not found for the current user.");
-        }
-
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setMonth(endDate.getMonth() - 12);
-
-        const expensesSnapshot = await db
-          .collection("expenses")
-          .where("companyID", "==", companyID)
-          .where("date", ">=", startDate)
-          .where("date", "<=", endDate)
-          .get();
-
-        const expensesByMonth = {};
-
-        expensesSnapshot.forEach((doc) => {
-          const expenseData = doc.data();
-          const expenseDate = expenseData.date.toDate();
-          const monthYear = `${expenseDate.toLocaleString("default", {
-            month: "short",
-          })} ${expenseDate.getFullYear()}`;
-          if (monthYear in expensesByMonth) {
-            expensesByMonth[monthYear] += parseFloat(expenseData.cost);
-          } else {
-            expensesByMonth[monthYear] = parseFloat(expenseData.cost);
-          }
-        });
-
-        const formattedExpensesData = Object.entries(expensesByMonth).map(
-          ([monthYear, cost]) => ({
-            monthYear,
-            cost: cost.toFixed(2),
-          })
-        );
-
-        console.log("Expenses data fetched:", formattedExpensesData);
-        setExpensesData(formattedExpensesData);
-      } catch (error) {
-        console.error("Error fetching expenses data:", error);
-        throw new Error(
-          "Failed to fetch expenses data. Please try again later."
-        );
-      }
-    };
-    fetchTotalSales();
-    fetchNumOrders();
-    fetchTopCustomer();
-    fetchLatestInvoices();
-    fetchSalesData();
-    fetchUnpaidInvoices();
-    fetchExpensesData();
-
     const unsubscribe = db.collection("invoices").onSnapshot(() => {
       fetchTotalSales();
       fetchNumOrders();
@@ -342,15 +277,10 @@ const MainScreen = ({ navigation }) => {
       fetchLatestInvoices();
       fetchSalesData();
       fetchUnpaidInvoices();
-      fetchExpensesData();
     });
 
     return () => unsubscribe();
   }, []);
-
-  const expenseForMonth = expensesData.find((expense) => {
-    return expense.monthYear === selectedMonth;
-  });
 
   const navigateToProfile = () => {
     navigation.navigate("ProfileScreen");
@@ -392,14 +322,9 @@ const MainScreen = ({ navigation }) => {
     </Modal>
   );
   console.log("Sales Data:", salesData);
-  console.log("Expenses Data:", expensesData);
   console.log(
     "Sales Data Months:",
     salesData.map((data) => data.date)
-  );
-  console.log(
-    "Expenses Data Months:",
-    expensesData.map((data) => data.monthYear)
   );
 
   return (
@@ -420,11 +345,9 @@ const MainScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       <View style={styles.additionalContentContainer}>
-        {salesData.length > 0 && expensesData.length > 0 && (
+        {salesData.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>
-              Total Sales and Expenses Per Month
-            </Text>
+            <Text style={styles.chartTitle}>Total Sales Per Month</Text>
             <BarChart
               data={{
                 labels: salesData.map((data) => data.date),
@@ -432,12 +355,6 @@ const MainScreen = ({ navigation }) => {
                   {
                     data: salesData.map((data) => parseFloat(data.total)),
                     color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                  },
-                  {
-                    data: expensesData.map((expense) =>
-                      parseFloat(expense.cost)
-                    ),
-                    color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`,
                   },
                 ],
               }}
@@ -467,8 +384,6 @@ const MainScreen = ({ navigation }) => {
                 propsForVerticalLabels: {
                   fontSize: 12,
                 },
-                color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`,
               }}
             />
           </View>
