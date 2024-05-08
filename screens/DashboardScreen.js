@@ -447,7 +447,8 @@ const DashboardScreen = () => {
               verticalLabelRotation={90}
               width={Dimensions.get("window").width}
               height={420}
-              yAxisSuffix="€"
+              yAxisLabel="€"
+              yAxisSuffix=""
               chartConfig={chartConfig}
             />
             <Text style={styles.chartTitle}>Top 5 Selling Products</Text>
@@ -462,6 +463,7 @@ const DashboardScreen = () => {
               }}
               width={screenWidth}
               height={220}
+              yAxisSuffix=" Q"
               chartConfig={customChartConfig}
             />
             <Text style={styles.chartTitle}>Expenses by Category</Text>
@@ -498,7 +500,8 @@ const DashboardScreen = () => {
               }}
               width={screenWidth}
               height={220}
-              yAxisSuffix="€"
+              yAxisLabel="€"
+              yAxisSuffix=""
               chartConfig={chartConfig2}
             />
           </View>
