@@ -26,7 +26,6 @@ const MainScreen = ({ navigation }) => {
   const [numInvoicesForMonth, setNumInvoicesForMonth] = useState(0);
   const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false);
   const [unpaidInvoicesCount, setUnpaidInvoicesCount] = useState(0);
-  const [expensesData, setExpensesData] = useState([]);
 
   useEffect(() => {
     const fetchTotalSales = async () => {
@@ -320,11 +319,6 @@ const MainScreen = ({ navigation }) => {
         </View>
       </TouchableOpacity>
     </Modal>
-  );
-  console.log("Sales Data:", salesData);
-  console.log(
-    "Sales Data Months:",
-    salesData.map((data) => data.date)
   );
 
   return (

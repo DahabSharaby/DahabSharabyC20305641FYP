@@ -93,7 +93,7 @@ const Payments = ({ navigation }) => {
     if (dateDiff >= 14) {
       return "red"; // Older than 2 weeks
     } else if (dateDiff >= 7) {
-      // return "yellow"; // 1 week or more
+      return "yellow"; // 1 week or more
     } else {
       // return "green"; // Less than a week
     }
