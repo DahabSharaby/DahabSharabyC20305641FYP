@@ -1,22 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, FlatList, Alert } from 'react-native';
-import { db, auth } from '../firebase';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  Alert,
+  TouchableOpacity,
+  Modal,
+} from "react-native";
+import { db, auth } from "../firebase";
 
 export default function CustomerScreen() {
-  const [customerName, setCustomerName] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState(''); 
+  const [customerName, setCustomerName] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [customers, setCustomers] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = db.collection('customers').onSnapshot((snapshot) => {
+    const unsubscribe = db.collection("customers").onSnapshot((snapshot) => {
       const customersData = [];
       snapshot.forEach((doc) => {
         customersData.push({ id: doc.id, ...doc.data() });
       });
       setCustomers(customersData);
+      setFilteredCustomers(customersData);
     });
 
     return () => unsubscribe();
@@ -27,154 +41,304 @@ export default function CustomerScreen() {
       const currentUser = auth.currentUser;
 
       if (currentUser) {
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          return userData.companyID; 
+          return userData.companyID ? parseInt(userData.companyID) : null;
         } else {
-          console.error('User document not found.');
+          console.error("User document not found.");
           return null;
         }
       } else {
-        console.error('User not authenticated.');
+        console.error("User not authenticated.");
         return null;
       }
     } catch (error) {
-      console.error('Error getting user company ID:', error);
+      console.error("Error getting user company ID:", error);
       return null;
     }
   };
 
+  const generateUniqueCustomerID = () => {
+    let uniqueID;
+    do {
+      uniqueID = Math.floor(10000 + Math.random() * 90000);
+    } while (customers.some((customer) => customer.customerID === uniqueID));
+    return uniqueID;
+  };
+
   const addCustomer = async () => {
     try {
+      if (!customerName || !customerAddress || !phoneNumber || !email) {
+        Alert.alert("All fields are required");
+        return;
+      }
+
       const companyID = await getCurrentUserCompanyID();
-      await db.collection('customers').add({
+      const customerID = generateUniqueCustomerID();
+
+      await db.collection("customers").add({
         companyID,
+        customerID,
         customerName,
         customerAddress,
-        phoneNumber,
-        email, 
+        phoneNumber: parseInt(phoneNumber),
+        email,
       });
 
-      setCustomerName('');
-      setCustomerAddress('');
-      setPhoneNumber('');
-      setEmail(''); 
+      setCustomerName("");
+      setCustomerAddress("");
+      setPhoneNumber("");
+      setEmail("");
+      setIsAddModalVisible(false);
     } catch (error) {
-      console.error('Error adding customer:', error);
+      console.error("Error adding customer:", error);
     }
   };
 
   const editCustomer = async () => {
     try {
       if (!selectedCustomer) {
-        Alert.alert('Select a customer to edit');
+        Alert.alert("Select a customer to edit");
         return;
       }
 
       const companyID = await getCurrentUserCompanyID();
-      await db.collection('customers').doc(selectedCustomer.id).update({
-        companyID,
-        customerName: customerName || selectedCustomer.customerName,
-        customerAddress: customerAddress || selectedCustomer.customerAddress,
-        phoneNumber: phoneNumber || selectedCustomer.phoneNumber,
-        email: email || selectedCustomer.email, 
-      });
+      await db
+        .collection("customers")
+        .doc(selectedCustomer.id)
+        .update({
+          companyID,
+          customerAddress: customerAddress || selectedCustomer.customerAddress,
+          phoneNumber: phoneNumber || selectedCustomer.phoneNumber,
+          email: email || selectedCustomer.email,
+        });
 
-      setCustomerName('');
-      setCustomerAddress('');
-      setPhoneNumber('');
-      setEmail('');
+      setCustomerAddress("");
+      setPhoneNumber("");
+      setEmail("");
       setSelectedCustomer(null);
+      setIsModalVisible(false);
     } catch (error) {
-      console.error('Error editing customer:', error);
+      console.error("Error editing customer:", error);
     }
   };
 
-  // const removeCustomer = async () => {
-  //   try {
-  //     if (!selectedCustomer) {
-  //       Alert.alert('Select a customer to delete');
-  //       return;
-  //     }
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const filtered = customers.filter((customer) =>
+      customer.customerName.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredCustomers(filtered);
+  };
 
-  //     await db.collection('customers').doc(selectedCustomer.id).delete();
-  //     setSelectedCustomer(null);
-  //   } catch (error) {
-  //     console.error('Error deleting customer:', error);
-  //   }
-  // };
+  const handleCustomerPress = (item) => {
+    setSelectedCustomer(item);
+    setCustomerName(item.customerName);
+    setCustomerAddress(item.customerAddress);
+    setPhoneNumber(item.phoneNumber.toString());
+    setEmail(item.email);
+    setIsModalVisible(true);
+  };
+
+  const handleEditCustomer = () => {
+    if (!selectedCustomer) {
+      Alert.alert("Select a customer to edit");
+      return;
+    }
+    setIsModalVisible(true);
+  };
+
+  const handleAddCustomer = () => {
+    setCustomerName("");
+    setCustomerAddress("");
+    setPhoneNumber("");
+    setEmail("");
+    setIsAddModalVisible(true);
+  };
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text>Add Customer:</Text>
-      <TextInput
-        placeholder="Customer Name"
-        value={customerName}
-        onChangeText={(text) => setCustomerName(text)}
-      />
-      <TextInput
-        placeholder="Customer Address"
-        value={customerAddress}
-        onChangeText={(text) => setCustomerAddress(text)}
-      />
-      <TextInput
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChangeText={(text) => setPhoneNumber(text)}
-      />
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={(text) => setEmail(text)}
-      />
-      <Button title="Add Customer" onPress={addCustomer} />
-
-      <Text style={{ marginTop: 20 }}>Customer List:</Text>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <TextInput
+          style={{
+            flex: 1,
+            height: 40,
+            borderColor: "gray",
+            borderWidth: 1,
+            marginBottom: 10,
+            marginRight: 10,
+          }}
+          placeholder="Search by customer name"
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+        <TouchableOpacity
+          style={{
+            backgroundColor: "black",
+            padding: 10,
+            borderRadius: 5,
+          }}
+          onPress={handleAddCustomer}
+        >
+          <Text style={{ color: "white", fontSize: 20 }}>+</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
-        data={customers}
+        data={filteredCustomers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 17 }}>
-            <Text>{`${item.customerName}  - ${item.email}`}</Text>
-            <Button title="Edit" onPress={() => setSelectedCustomer(item)} />
-          </View>
+          <TouchableOpacity onPress={() => handleCustomerPress(item)}>
+            <View
+              style={{
+                backgroundColor: "black",
+                padding: 10,
+                marginBottom: 10,
+                borderRadius: 5,
+              }}
+            >
+              <Text style={{ color: "white" }}>
+                Customer Name: {item.customerName}
+              </Text>
+              <Text style={{ color: "white" }}>
+                Address: {item.customerAddress}
+              </Text>
+              <Text style={{ color: "white" }}>
+                Phone Number: {item.phoneNumber}
+              </Text>
+              <Text style={{ color: "white" }}>Email: {item.email}</Text>
+            </View>
+          </TouchableOpacity>
         )}
       />
-{/* - ${item.customerAddress} - ${item.phoneNumber} */}
-      {selectedCustomer && (
-        <>
-          <Text style={{ marginTop: 20 }}>Edit Customer:</Text>
-          <TextInput
-            placeholder="Customer Name"
-            value={customerName || selectedCustomer.customerName}
-            onChangeText={(text) => setCustomerName(text)}
-          />
-          <TextInput
-            placeholder="Customer Address"
-            value={customerAddress || selectedCustomer.customerAddress}
-            onChangeText={(text) => setCustomerAddress(text)}
-          />
-          <TextInput
-            placeholder="Phone Number"
-            value={phoneNumber || selectedCustomer.phoneNumber}
-            onChangeText={(text) => setPhoneNumber(text)}
-          />
-          <TextInput
-            placeholder="Email"
-            value={email || selectedCustomer.email}
-            onChangeText={(text) => setEmail(text)}
-          />
-          <Button title="Save Changes" onPress={editCustomer} />
-        </>
-      )}
-
-      {/* <Button
-        title="Delete Customer"
-        onPress={removeCustomer}
-        disabled={!selectedCustomer}
-        style={{ marginTop: 20 }}
-      /> */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isAddModalVisible}
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              padding: 20,
+              borderRadius: 10,
+              width: "80%",
+            }}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 10 }}>Add Customer</Text>
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Customer Name"
+              value={customerName}
+              onChangeText={setCustomerName}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Address"
+              value={customerAddress}
+              onChangeText={setCustomerAddress}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Phone Number"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+            />
+            <Button title="Add Customer" onPress={addCustomer} />
+            <Button
+              title="Cancel"
+              onPress={() => setIsAddModalVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              padding: 20,
+              borderRadius: 10,
+              width: "80%",
+            }}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 10 }}>
+              Editing Customer: {selectedCustomer?.customerName}
+            </Text>
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Address"
+              value={customerAddress}
+              onChangeText={setCustomerAddress}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Phone Number"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+              }}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+            />
+            <Button title="Save Changes" onPress={editCustomer} />
+            <Button title="Cancel" onPress={() => setIsModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

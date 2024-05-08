@@ -4,12 +4,14 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  Image,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+
+const DigitalBlitzLogo = require("../image1/DigitalBlitz.png");
 
 const InvoiceDetail = ({ route }) => {
   const { invoice } = route.params;
@@ -24,35 +26,33 @@ const InvoiceDetail = ({ route }) => {
   };
 
   const sharePDF = async () => {
+    const logoContent = `<img src="${DigitalBlitzLogo}" style="width: 100px; height: 100px;"/>`;
+
     const htmlContent = `
-      <html>
-        <body>
-          <h1>Invoice Details</h1>
-          <p>Invoice Number: ${invoice.invoiceNumber}</p>
-          <p>Customer Name: ${invoice.customerName}</p>
-          <p>Total: €${invoice.total}</p>
-          <p>Date: ${formatDate(invoice.date)}</p>
-          ${
-            invoice.imageURL
-              ? `<img src="${invoice.imageURL}" style="width: 200px; height: 200px;"/>`
-              : ""
-          }
-          <ul>
-            ${invoice.productList
-              .map(
-                (item) => `
-              <li>
-                <p>Product: ${item.name}</p>
-                <p>Price: €${item.price}</p>
-                <p>Quantity: ${item.quantity}</p>
-              </li>
-            `
-              )
-              .join("")}
-          </ul>
-        </body>
-      </html>
-    `;
+    <html>
+      <body>
+        ${logoContent}
+        <h1>Invoice Details</h1>
+        <p>Invoice Number: ${invoice.invoiceNumber}</p>
+        <p>Customer Name: ${invoice.customerName}</p>
+        <p>Total: €${invoice.total}</p>
+        <p>Date: ${formatDate(invoice.date)}</p>
+        <ul>
+          ${invoice.productList
+            .map(
+              (item) => `
+            <li>
+              <p>Product: ${item.name}</p>
+              <p>Price: €${item.price}</p>
+              <p>Quantity: ${item.quantity}</p>
+            </li>
+          `
+            )
+            .join("")}
+        </ul>
+      </body>
+    </html>
+  `;
     try {
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       await Sharing.shareAsync(uri);
@@ -63,12 +63,13 @@ const InvoiceDetail = ({ route }) => {
 
   return (
     <View style={styles.container}>
+      <Image source={DigitalBlitzLogo} style={styles.logo} />
       <Text>Invoice Number: {invoice.invoiceNumber}</Text>
       <Text>Customer Name: {invoice.customerName}</Text>
       <Text>Total: €{invoice.total}</Text>
       <Text>Date: {formatDate(invoice.date)}</Text>
       {invoice.imageURL && (
-        <Image source={{ uri: invoice.imageURL }} style={styles.image} />
+        <Image source={{ uri: invoice.imageURL }} style={styles.invoiceImage} />
       )}
       <FlatList
         data={invoice.productList}
@@ -91,14 +92,10 @@ const InvoiceDetail = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "white",
     padding: 20,
     top: 40,
-  },
-  image: {
-    width: 200,
-    height: 200,
-    marginTop: 20,
-    resizeMode: "cover",
+    marginBottom: 30,
   },
   shareButton: {
     backgroundColor: "blue",
@@ -106,6 +103,16 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginTop: 20,
     alignItems: "center",
+  },
+  logo: {
+    width: 100,
+    height: 100,
+  },
+  invoiceImage: {
+    width: "100%",
+    height: 200,
+    marginTop: 20,
+    resizeMode: "cover",
   },
 });
 

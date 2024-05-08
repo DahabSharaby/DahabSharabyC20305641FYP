@@ -20,6 +20,7 @@ import InvoiceDetail from "./screens/InvoiceDetail.js";
 import ProfileScreen from "./screens/ProfileScreen.js";
 import UploadScreen from "./screens/UploadScreen.js";
 import Payments from "./screens/Payments";
+import Expenses from "./screens/Expenses";
 
 const Stack = createNativeStackNavigator();
 
@@ -115,6 +116,12 @@ export default function App() {
         <Stack.Screen
           name="Payments"
           component={Payments}
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen
+          name="Expenses"
+          component={Expenses}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

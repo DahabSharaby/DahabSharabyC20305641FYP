@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, Button, FlatList, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  Alert,
+  TouchableOpacity,
+  Modal,
+} from "react-native";
 import { db, auth } from "../firebase";
 
 const ProductScreen = () => {
-  const [action, setAction] = useState("");
   const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState(0);
-  const [productId, setProductId] = useState("");
+  const [productPrice, setProductPrice] = useState("");
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [productSold, setProductSold] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
     const unsubscribe = db.collection("products").onSnapshot((snapshot) => {
@@ -23,6 +32,13 @@ const ProductScreen = () => {
     return () => unsubscribe();
   }, []);
 
+  const handleProductPress = (item) => {
+    setSelectedProduct(item);
+    setProductName(item.productName);
+    setProductPrice(item.productPrice);
+    setIsEditModalVisible(true);
+  };
+
   const getCurrentUserCompanyID = async () => {
     try {
       const currentUser = auth.currentUser;
@@ -31,7 +47,7 @@ const ProductScreen = () => {
         const userDoc = await db.collection("users").doc(currentUser.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          return userData.companyID;
+          return userData.companyID ? parseInt(userData.companyID) : null;
         } else {
           console.error("User document not found.");
           return null;
@@ -48,183 +64,239 @@ const ProductScreen = () => {
 
   const addProduct = async () => {
     try {
+      if (!productName || !productPrice) {
+        Alert.alert("Missing Fields", "Please fill in all fields.");
+        return;
+      }
+
       const companyID = await getCurrentUserCompanyID();
-      await db.collection("products").add({
-        companyID,
-        productName,
-        productPrice,
-        productId,
-        // productSold,
-      });
+      let productId;
+
+      do {
+        productId = Math.floor(10000 + Math.random() * 90000);
+      } while (products.some((product) => product.productId === productId));
+
+      await db
+        .collection("products")
+        .doc(productId.toString())
+        .set({
+          productName: productName,
+          productPrice: parseFloat(productPrice),
+          productId: productId,
+          companyID: companyID,
+        });
 
       Alert.alert("Product Added", "Product has been added successfully.");
-      setAction("");
+
       setProductName("");
-      setProductPrice(0);
-      setProductId("");
-      // setProductSold(0);
+      setProductPrice("");
+      setIsAddModalVisible(false);
     } catch (error) {
       console.error("Error adding product:", error);
     }
   };
 
-  const editProduct = async () => {
+  const editProductPrice = async () => {
     try {
       if (!selectedProduct) {
         Alert.alert("Select a product to edit");
         return;
       }
 
-      const companyID = await getCurrentUserCompanyID();
+      if (!productPrice || productPrice.toString().trim() === "") {
+        Alert.alert("Empty Price", "Please enter a valid product price.");
+        return;
+      }
+
       await db
         .collection("products")
         .doc(selectedProduct.id)
         .update({
-          companyID,
-          productName: productName || selectedProduct.productName,
-          productPrice: productPrice || selectedProduct.productPrice,
-          productId: productId || selectedProduct.productId,
-          productSold: productSold || selectedProduct.productSold,
+          productPrice: parseFloat(productPrice),
         });
 
-      Alert.alert("Product Edited", "Product has been edited successfully.");
-      setAction("");
+      Alert.alert(
+        "Product Price Edited",
+        "Product price has been edited successfully."
+      );
+
       setProductName("");
-      setProductPrice(0);
-      setProductId("");
-      // setProductSold(0);
+      setProductPrice("");
+      setIsEditModalVisible(false);
       setSelectedProduct(null);
     } catch (error) {
-      console.error("Error editing product:", error);
+      console.error("Error editing product price:", error);
     }
   };
 
-  const deleteProduct = async () => {
-    try {
-      if (!selectedProduct) {
-        Alert.alert("Select a product to delete");
-        return;
-      }
-
-      await db.collection("products").doc(selectedProduct.id).delete();
-      Alert.alert("Product Deleted", "Product has been deleted successfully.");
-
-      setProducts((prevProducts) =>
-        prevProducts.filter((product) => product.id !== selectedProduct.id)
-      );
-
-      setAction("");
-      setProductName("");
-      setProductPrice("");
-      setProductId("");
-      setSelectedProduct(null);
-    } catch (error) {
-      console.error("Error deleting product:", error);
-    }
+  const handleEditCancel = () => {
+    setProductName("");
+    setProductPrice("");
+    setIsEditModalVisible(false);
+    setSelectedProduct(null);
   };
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text>Add Product:</Text>
-      <TextInput
-        placeholder="Product Name"
-        value={productName}
-        onChangeText={(text) => setProductName(text)}
-      />
-      {/* <TextInput
-        placeholder="Product Price"
-        value={productPrice}
-        onChangeText={(text) => setProductPrice(text)}
-        keyboardType="numeric"
-      /> */}
-      <TextInput
-        placeholder="Product Price"
-        value={productPrice !== null ? productPrice.toString() : ""}
-        onChangeText={(text) => {
-          const numericValue = parseFloat(text);
-          setProductPrice(isNaN(numericValue) ? null : numericValue);
-        }}
-        keyboardType="decimal-pad"
-      />
-
-      <TextInput
-        placeholder="Product ID"
-        value={productId}
-        onChangeText={(text) => setProductId(text)}
-      />
-
-      {/* <TextInput
-        value={String(productSold)}
-        placeholder="Sold Stock"
-        onChangeText={(text) => setProductSold(text)}
-        keyboardType="numeric"
-      /> */}
-      {/* <TextInput
-        value={productSold !== null ? String(productSold) : ""}
-        placeholder="Sold Stock"
-        onChangeText={(text) => {
-          const numericValue = parseFloat(text);
-          setProductSold(isNaN(numericValue) ? null : numericValue);
-        }}
-        keyboardType="numeric"
-      /> */}
-
-      <Button title="Add Product" onPress={addProduct} />
-
-      <Text style={{ marginTop: 20 }}>Product List:</Text>
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
+      >
+        <TextInput
+          style={{
+            flex: 1,
+            height: 40,
+            borderColor: "gray",
+            borderWidth: 1,
+            marginRight: 10,
+            paddingHorizontal: 10,
+          }}
+          placeholder="Search by product name"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity
+          style={{
+            backgroundColor: "black",
+            padding: 10,
+            borderRadius: 5,
+          }}
+          onPress={() => setIsAddModalVisible(true)}
+        >
+          <Text style={{ color: "white", fontSize: 20 }}>+</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={products}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 10,
-            }}
-          >
-            {/* - ${item.productSold} */}
-            <Text>{`${item.productName} - ${item.productPrice} - ${item.productId}  `}</Text>
-            <Button title="Edit" onPress={() => setSelectedProduct(item)} />
-          </View>
+          <TouchableOpacity onPress={() => handleProductPress(item)}>
+            <View
+              style={{
+                backgroundColor: "black",
+                padding: 10,
+                marginBottom: 10,
+                borderRadius: 5,
+              }}
+            >
+              <Text style={{ color: "white" }}>
+                Product Name: {item.productName}
+              </Text>
+              <Text style={{ color: "white" }}>Price: {item.productPrice}</Text>
+              <Text style={{ color: "white" }}>ID: {item.productId}</Text>
+            </View>
+          </TouchableOpacity>
         )}
       />
-
-      {selectedProduct && (
-        <>
-          <Text style={{ marginTop: 20 }}>Edit Product:</Text>
-          <TextInput
-            placeholder="Product Name"
-            value={productName || selectedProduct.productName}
-            onChangeText={(text) => setProductName(text)}
-          />
-          <TextInput
-            placeholder="Product Price"
-            value={productPrice || selectedProduct.productPrice}
-            onChangeText={(text) => setProductPrice(text)}
-          />
-          <TextInput
-            placeholder="Product ID"
-            value={productId || selectedProduct.productId}
-            onChangeText={(text) => setProductId(text)}
-          />
-
-          {/* <TextInput
-            placeholder="Sold Stock"
-            value={productSold || selectedProduct.productSold}
-            onChangeText={(text) => setProductSold(text)}
-          /> */}
-          <Button title="Save Changes" onPress={editProduct} />
-        </>
-      )}
-
-      {/* <Button
-        title="Delete Product"
-        onPress={deleteProduct}
-        disabled={!selectedProduct}
-        style={{ marginTop: 20 }}
-      /> */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isAddModalVisible}
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              padding: 20,
+              borderRadius: 10,
+              width: "80%",
+            }}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 10 }}>
+              Add New Product
+            </Text>
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+                paddingHorizontal: 10,
+              }}
+              placeholder="Product Name"
+              value={productName}
+              onChangeText={setProductName}
+            />
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+                paddingHorizontal: 10,
+              }}
+              placeholder="Price"
+              value={productPrice}
+              onChangeText={setProductPrice}
+              keyboardType="numeric"
+            />
+            <Button title="Add Product" onPress={addProduct} />
+            <Button
+              title="Cancel"
+              onPress={() => setIsAddModalVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isEditModalVisible}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <View
+            style={{
+              backgroundColor: "white",
+              padding: 20,
+              borderRadius: 10,
+              width: "80%",
+            }}
+          >
+            <TouchableOpacity
+              style={{
+                position: "absolute",
+                top: 5,
+                right: 5,
+              }}
+              onPress={handleEditCancel}
+            ></TouchableOpacity>
+            <Text style={{ fontSize: 20, marginBottom: 10 }}>
+              Edit Product Price
+            </Text>
+            <Text style={{ marginBottom: 10 }}>
+              Product: {selectedProduct?.productName}
+            </Text>
+            <TextInput
+              style={{
+                height: 40,
+                borderColor: "gray",
+                borderWidth: 1,
+                marginBottom: 10,
+                paddingHorizontal: 10,
+              }}
+              placeholder="Price"
+              value={productPrice}
+              onChangeText={(text) => {
+                const filteredText = text
+                  .replace(/[^\d.]/g, "")
+                  .replace(/^(\d*\.\d*)\./g, "$1");
+                setProductPrice(filteredText);
+              }}
+              keyboardType="numeric"
+            />
+            <Button title="Save Price" onPress={editProductPrice} />
+            <Button
+              title="Cancel"
+              onPress={() => setIsEditModalVisible(false)}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

@@ -6,25 +6,29 @@ import {
   Dimensions,
   ActivityIndicator,
   ScrollView,
+  TouchableOpacity,
+  Modal,
 } from "react-native";
-import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
+import { LineChart, BarChart, PieChart, YAxis } from "react-native-chart-kit";
 import { db, auth } from "../firebase";
 import { Picker } from "@react-native-picker/picker";
+import { Ionicons } from "@expo/vector-icons";
 
 const DashboardScreen = () => {
   const [salesData, setSalesData] = useState([]);
   const [topProductsData, setTopProductsData] = useState([]);
-  const [topCustomersData, setTopCustomersData] = useState([]);
   const [totalSalesByCustomerData, setTotalSalesByCustomerData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("31");
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [expensesData, setExpensesData] = useState([]);
 
   useEffect(() => {
     fetchSalesData(timeRange);
     fetchTopProducts(timeRange);
-    fetchTopCustomers(timeRange);
     fetchTotalSalesByCustomer(timeRange);
+    fetchExpensesData(timeRange);
   }, [timeRange]);
 
   const fetchSalesData = async (range) => {
@@ -94,25 +98,6 @@ const DashboardScreen = () => {
         total: total.toFixed(2),
       }));
 
-      switch (range) {
-        case "31":
-          startDate.setDate(endDate.getDate() - 31);
-          break;
-        case "183":
-          startDate.setMonth(endDate.getMonth() - 6);
-          break;
-        case "365":
-          startDate.setFullYear(endDate.getFullYear() - 1);
-          break;
-        case "730":
-          startDate.setFullYear(endDate.getFullYear() - 2);
-          break;
-        case "1095":
-          startDate.setFullYear(endDate.getFullYear() - 3);
-          break;
-        default:
-          startDate.setDate(endDate.getDate() - 31);
-      }
       console.log("Formatted sales data:", formattedSalesData);
       setSalesData(formattedSalesData);
     } catch (error) {
@@ -201,7 +186,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchTopCustomers = async (range) => {
+  const fetchExpensesData = async (range) => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -216,7 +201,7 @@ const DashboardScreen = () => {
         throw new Error("Company ID not found for the current user.");
       }
 
-      console.log("Fetching top customers...");
+      console.log("Fetching sales data...");
       const endDate = new Date();
       const startDate = new Date();
 
@@ -240,42 +225,35 @@ const DashboardScreen = () => {
           startDate.setDate(endDate.getDate() - 31);
       }
 
-      const invoicesSnapshot = await db
-        .collection("invoices")
+      const expensesSnapshot = await db
+        .collection("expenses")
         .where("companyID", "==", companyID)
         .where("date", ">=", startDate)
         .where("date", "<=", endDate)
         .get();
+      const totalExpenses = expensesSnapshot.size;
 
-      const customerInvoiceCountMap = new Map();
-      invoicesSnapshot.forEach((doc) => {
-        const customerName = doc.data().customerName.trim();
-        if (!customerInvoiceCountMap.has(customerName)) {
-          customerInvoiceCountMap.set(customerName, 1);
+      const expensesByType = {};
+
+      expensesSnapshot.forEach((doc) => {
+        const { type } = doc.data();
+        if (type in expensesByType) {
+          expensesByType[type]++;
         } else {
-          customerInvoiceCountMap.set(
-            customerName,
-            customerInvoiceCountMap.get(customerName) + 1
-          );
+          expensesByType[type] = 1;
         }
       });
 
-      const totalInvoices = invoicesSnapshot.size;
-      const topCustomers = [...customerInvoiceCountMap.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([customerName, invoiceCount]) => ({
-          customerName,
-          percentage: ((invoiceCount / totalInvoices) * 100).toFixed(2),
-        }));
+      const expensesData = Object.entries(expensesByType).map(
+        ([type, count]) => ({
+          type,
+          percentage: (count / totalExpenses) * 100,
+        })
+      );
 
-      console.log("Top customers data fetched:", topCustomers);
-      setTopCustomersData(topCustomers);
+      setExpensesData(expensesData);
     } catch (error) {
-      console.error("Error fetching top customers:", error);
-      setError("Failed to fetch top customers. Please try again later.");
-    } finally {
-      setLoading(false);
+      console.error("Error fetching expenses data:", error);
     }
   };
 
@@ -340,16 +318,12 @@ const DashboardScreen = () => {
 
       console.log("Total sales by customer data fetched:", salesByCustomer);
       const formattedSalesByCustomerData = Object.entries(salesByCustomer).map(
-        ([customerName, totalSales]) => ({
+        ([customerName, total]) => ({
           customerName,
-          totalSales: totalSales.toFixed(2),
+          total: total.toFixed(2),
         })
       );
 
-      console.log(
-        "Formatted total sales by customer data:",
-        formattedSalesByCustomerData
-      );
       setTotalSalesByCustomerData(formattedSalesByCustomerData);
     } catch (error) {
       console.error("Error fetching total sales by customer:", error);
@@ -361,247 +335,262 @@ const DashboardScreen = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
+  const chartConfig = {
+    backgroundGradientFrom: "white",
+    backgroundGradientTo: "white",
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "2",
+      stroke: "#ffa726",
+    },
+  };
+  const customChartConfig = {
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "2",
+      stroke: "#ffa726",
+    },
+  };
+  const chartConfig2 = {
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(150, 0, 50, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    style: {
+      borderRadius: 16,
+    },
+  };
 
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
-  }
-  const pieChartColors = [
-    "#FF5733", // Red
-    "#FFD700", // Gold
-    "#00FF00", // Lime
-    "#00CED1", // Dark Turquoise
-    "#8A2BE2", // Blue Violet
-    "#FF69B4", // Hot Pink
-    "#FF4500", // Orange Red
-    "#7FFF00", // Chartreuse
-    "#20B2AA", // Light Sea Green
-    "#FF1493", // Deep Pink
-    "#00BFFF", // Deep Sky Blue
-    "#ADFF2F", // Green Yellow
-    "#4682B4", // Steel Blue
-    "#FF8C00", // Dark Orange
-    "#9400D3", // Dark Violet
-  ];
+  const screenWidth = Dimensions.get("window").width;
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollViewContent}>
-      <View style={styles.container}>
-        <Picker
-          selectedValue={timeRange}
-          style={{ height: 50, width: 150 }}
-          onValueChange={(itemValue, itemIndex) => setTimeRange(itemValue)}
-        >
-          <Picker.Item label="31 Days" value="31" />
-          <Picker.Item label="6 Months" value="183" />
-          <Picker.Item label="1 Year" value="365" />
-          <Picker.Item label="2 Years" value="730" />
-          <Picker.Item label="3 Years" value="1095" />
-        </Picker>
-        <Text style={styles.chartTitle}>Sales Data</Text>
-        <LineChart
-          data={{
-            labels: salesData.map((sale) => sale.date),
-            datasets: [
-              {
-                data: salesData.map((sale) => sale.total),
-              },
-            ],
-          }}
-          verticalLabelRotation={90}
-          width={Dimensions.get("window").width}
-          height={420}
-          yAxisSuffix="€"
-          yAxisInterval={1}
-          chartConfig={{
-            backgroundColor: "#f5f5f5",
-            backgroundGradientFrom: "#FFFFFF",
-            backgroundGradientTo: "#FFFFFF",
-            decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(53, 108, 173, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(53, 108, 173, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#3570AD",
-            },
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-          }}
-        />
+    <View style={styles.container}>
+      <ScrollView>
+        <View style={styles.actionBar} stickyHeaderIndices={[0]}>
+          <Text style={styles.title}>Company Overview</Text>
 
-        <Text style={styles.chartTitle}>Top Selling Products</Text>
-        <BarChart
-          data={{
-            labels: topProductsData.map((product) => product.productName),
-            datasets: [
-              {
-                data: topProductsData.map((product) => product.quantity),
-              },
-            ],
-          }}
-          width={Dimensions.get("window").width - 16}
-          height={220}
-          yAxisSuffix=""
-          yAxisInterval={1}
-          chartConfig={{
-            backgroundColor: "#e26a00",
-            backgroundGradientFrom: "#ff0000",
-            backgroundGradientTo: "#ffa726",
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#ffa726",
-            },
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-          }}
-        />
-        <Text style={styles.chartTitle}>Top Customers</Text>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => setIsMenuVisible(true)}
+          >
+            <Ionicons name="options-outline" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
 
-        <PieChart
-          data={topCustomersData.map((customer, index) => ({
-            name: customer.customerName,
-            percentage: parseInt(customer.percentage),
-            label: `${parseInt(customer.percentage)}%`,
-            color: pieChartColors[index % pieChartColors.length],
-          }))}
-          width={Dimensions.get("window").width - 16}
-          height={220}
-          chartConfig={{
-            backgroundColor: "#e26a00",
-            backgroundGradientFrom: "#fb8c00",
-            backgroundGradientTo: "#ffa726",
-            color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForLabels: {
-              fontSize: 10,
-            },
-          }}
-          accessor="percentage"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          absolute
-          renderDecorator={({ x, y, dataEntry }) => {
-            return (
-              <Text
-                style={{
-                  position: "absolute",
-                  top: y - 20,
-                  left: x - 20,
-                  fontSize: 12,
-                  color: "white",
-                }}
-              >
-                {dataEntry.label}
-              </Text>
-            );
-          }}
-        />
-        <Text style={styles.chartTitle}>Total Sales by Customer</Text>
-        <BarChart
-          data={{
-            labels: totalSalesByCustomerData.map(
-              (customer) => customer.customerName
-            ),
-            datasets: [
-              {
-                data: totalSalesByCustomerData.map(
-                  (customer) => customer.totalSales
+        {loading ? (
+          <ActivityIndicator size="large" color="#0000ff" />
+        ) : error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : (
+          <View>
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={isMenuVisible}
+              onRequestClose={() => {
+                setIsMenuVisible(false);
+              }}
+            >
+              <View style={styles.centeredView}>
+                <View style={styles.modalView}>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setIsMenuVisible(false)}
+                  >
+                    <Ionicons name="close-outline" size={24} color="black" />
+                  </TouchableOpacity>
+                  <View style={styles.pickerContainer}>
+                    <Text style={styles.modalText}>Select Time Range:</Text>
+                    <Picker
+                      selectedValue={timeRange}
+                      style={styles.picker}
+                      onValueChange={(itemValue, itemIndex) => {
+                        setTimeRange(itemValue);
+                        setIsMenuVisible(false);
+                      }}
+                    >
+                      <Picker.Item label="Last 31 days" value="31" />
+                      <Picker.Item label="Last 6 months" value="183" />
+                      <Picker.Item label="Last 1 year" value="365" />
+                      <Picker.Item label="Last 2 years" value="730" />
+                      <Picker.Item label="Last 3 years" value="1095" />
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+            <Text style={styles.chartTitle}>Total Sales Over Time</Text>
+            <LineChart
+              data={{
+                labels: salesData.map((data) => data.date),
+                datasets: [
+                  {
+                    data: salesData.map((data) => parseFloat(data.total)),
+                  },
+                ],
+              }}
+              verticalLabelRotation={90}
+              width={Dimensions.get("window").width}
+              height={420}
+              yAxisSuffix="€"
+              chartConfig={chartConfig}
+            />
+            <Text style={styles.chartTitle}>Top 5 Selling Products</Text>
+            <BarChart
+              data={{
+                labels: topProductsData.map((product) => product.productName),
+                datasets: [
+                  {
+                    data: topProductsData.map((product) => product.quantity),
+                  },
+                ],
+              }}
+              width={screenWidth}
+              height={220}
+              chartConfig={customChartConfig}
+            />
+            <Text style={styles.chartTitle}>Expenses by Category</Text>
+            <PieChart
+              data={expensesData.map((data, index) => ({
+                name: data.type,
+                amount: Math.round(data.percentage),
+                color: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(
+                  Math.random() * 256
+                )}, ${Math.floor(Math.random() * 256)}, 1)`,
+              }))}
+              width={screenWidth}
+              height={220}
+              chartConfig={chartConfig}
+              accessor="amount"
+              backgroundColor="transparent"
+              paddingLeft="0"
+              absolute
+            />
+            <Text style={styles.chartTitle}>Total Sales by Customer</Text>
+
+            <BarChart
+              data={{
+                labels: totalSalesByCustomerData.map(
+                  (data) => data.customerName
                 ),
-              },
-            ],
-          }}
-          width={Dimensions.get("window").width - 16}
-          height={220}
-          yAxisSuffix=" €"
-          yAxisInterval={1}
-          chartConfig={{
-            backgroundColor: "#8A2BE2",
-            backgroundGradientFrom: "#8A2BE2",
-            backgroundGradientTo: "#FF69B4",
-            decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: "6",
-              strokeWidth: "2",
-              stroke: "#ffa726",
-            },
-          }}
-          bezier
-          style={{
-            marginVertical: 8,
-            borderRadius: 16,
-          }}
-        />
-      </View>
-    </ScrollView>
+                datasets: [
+                  {
+                    data: totalSalesByCustomerData.map((data) =>
+                      parseFloat(data.total)
+                    ),
+                  },
+                ],
+              }}
+              width={screenWidth}
+              height={220}
+              yAxisSuffix="€"
+              chartConfig={chartConfig2}
+            />
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
-    top: 40,
+    backgroundColor: "#fff",
+    paddingTop: 40,
   },
-  scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  actionBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    zIndex: 1,
+    position: "fixed",
+    width: "100%",
+    top: 0,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 18,
-    color: "red",
-  },
-  chartTitle: {
+  title: {
     fontSize: 20,
     fontWeight: "bold",
+    flex: 1,
+  },
+  menuButton: {
+    marginRight: "auto",
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginTop: 60,
     marginBottom: 10,
+  },
+  errorText: {
+    textAlign: "center",
+    color: "red",
+    marginTop: 20,
+  },
+  modalText: {
+    color: "black",
+    fontSize: 16,
+    marginTop: 10,
+    marginLeft: 20,
+  },
+  pickerContainer: {
+    marginTop: 1,
+    marginLeft: 20,
+    width: 200,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+  },
+  picker: {
+    height: 70,
+    width: "100%",
+    color: "black",
+  },
+  centeredView: {
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    marginLeft: 100,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
 });
 
