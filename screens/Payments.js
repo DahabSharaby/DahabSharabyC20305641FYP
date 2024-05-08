@@ -35,7 +35,7 @@ const Payments = ({ navigation }) => {
         const invoiceSnapshot = await db
           .collection("invoices")
           .where("companyID", "==", companyID)
-          .where("status", "!=", "paid")
+          .where("status", "==", "unpaid")
           .orderBy("date", "desc")
           .get();
 
@@ -45,10 +45,16 @@ const Payments = ({ navigation }) => {
         }));
         setInvoices(invoiceData);
 
-        if (invoiceData.length > 0) {
+        // Check if an invoice is 2 weeks old and show alert
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        const oldInvoices = invoiceData.filter(
+          (invoice) => invoice.date.toDate() <= twoWeeksAgo
+        );
+        if (oldInvoices.length > 0) {
           Alert.alert(
-            "Unpaid Invoices",
-            `You have ${invoiceData.length} unpaid invoices.`
+            "Over due Invoice(s)",
+            `You have ${oldInvoices.length} invoice(s) 2 weeks old or older.`
           );
         }
       } catch (error) {
@@ -75,9 +81,22 @@ const Payments = ({ navigation }) => {
     }
   };
 
-  const handleInvoicePress = (id, currentStatus) => {
+  const handleCheckboxPress = async (id, currentStatus) => {
     const newStatus = currentStatus === "paid" ? "unpaid" : "paid";
-    updateInvoiceStatus(id, newStatus);
+    await updateInvoiceStatus(id, newStatus);
+  };
+
+  const getStatusColor = (status, date) => {
+    const invoiceDate = date.toDate();
+    const today = new Date();
+    const dateDiff = Math.ceil((today - invoiceDate) / (1000 * 60 * 60 * 24));
+    if (dateDiff >= 14) {
+      return "red"; // Older than 2 weeks
+    } else if (dateDiff >= 7) {
+      // return "yellow"; // 1 week or more
+    } else {
+      // return "green"; // Less than a week
+    }
   };
 
   const filteredInvoices = invoices.filter(
@@ -99,13 +118,28 @@ const Payments = ({ navigation }) => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.invoiceItem}
-            onPress={() => handleInvoicePress(item.id, item.status)}
+            style={[
+              styles.invoiceItem,
+              { borderColor: getStatusColor(item.status, item.date) },
+            ]}
+            onPress={() => handleCheckboxPress(item.id, item.status)}
           >
-            <Text>Invoice Number: {item.invoiceNumber}</Text>
-            <Text>Customer Name: {item.customerName}</Text>
-            <Text>Total: €{item.total}</Text>
-            <Text>Status: {item.status}</Text>
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.checkbox,
+                  item.status === "paid" && styles.checked,
+                ]}
+                onPress={() => handleCheckboxPress(item.id, item.status)}
+              />
+            </View>
+            <View style={styles.invoiceDetails}>
+              <Text>Invoice Number: {item.invoiceNumber}</Text>
+              <Text>Customer Name: {item.customerName}</Text>
+              <Text>Total: €{item.total}</Text>
+              <Text>Status: {item.status}</Text>
+              <Text>Date: {item.date.toDate().toLocaleDateString()}</Text>
+            </View>
           </TouchableOpacity>
         )}
       />
@@ -117,7 +151,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    top: 40,
+    backgroundColor: "#FFFFFF",
+    marginTop: 40,
   },
   searchBar: {
     padding: 10,
@@ -130,6 +165,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  checkboxContainer: {
+    marginRight: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderRadius: 3,
+  },
+  checked: {
+    backgroundColor: "blue",
+  },
+  invoiceDetails: {
+    flex: 1,
   },
 });
 

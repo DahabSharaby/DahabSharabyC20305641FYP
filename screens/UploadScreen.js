@@ -11,14 +11,25 @@ function UploadScreen() {
       const document = await DocumentPicker.getDocumentAsync({
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
+      console.log("q", document);
+      const workbook = XLSX.readFile(document.assets.name);
+      // const workbook = XLSX.read(document.assets.uri);
+      const worksheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[worksheetName];
+      console.log("log", XLSX.utils.sheet_to_json(worksheet));
 
-      if (document.type === "success") {
-        const workbook = XLSX.read(document.uri, { type: "uri" });
+      if (document.canceled === false) {
+        const workbook = XLSX.read(document.assets.uri);
         const worksheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[worksheetName];
         const data = XLSX.utils.sheet_to_json(worksheet);
+        console.log("log", XLSX.utils.sheet_to_json(worksheet));
         setExcelData(data.slice(0, 10));
-      } else if (document.type === "cancel") {
+        console.log("o", uri);
+        console.log("1", workbook);
+        console.log("2", worksheetName);
+        console.log("3", worksheet);
+      } else if (document.canceled === true) {
         console.log("Document picker cancelled by user");
       } else {
         Alert.alert("Error", "Failed to pick the document");

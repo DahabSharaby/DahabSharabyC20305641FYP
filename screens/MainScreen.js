@@ -26,11 +26,27 @@ const MainScreen = ({ navigation }) => {
   const [numInvoicesForMonth, setNumInvoicesForMonth] = useState(0);
   const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false);
   const [unpaidInvoicesCount, setUnpaidInvoicesCount] = useState(0);
+  const [expensesData, setExpensesData] = useState([]);
 
   useEffect(() => {
     const fetchTotalSales = async () => {
       try {
-        const salesRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching total sales...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const salesRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await salesRef.get();
         let total = 0;
         snapshot.forEach((doc) => {
@@ -48,7 +64,22 @@ const MainScreen = ({ navigation }) => {
 
     const fetchNumOrders = async () => {
       try {
-        const ordersRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching number of orders...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const ordersRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await ordersRef.get();
         setNumOrders(snapshot.size);
         console.log("Number of Orders:", snapshot.size);
@@ -59,31 +90,46 @@ const MainScreen = ({ navigation }) => {
 
     const fetchTopCustomer = async () => {
       try {
-        const customersRef = db.collection("invoices");
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching top customer...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const customersRef = db
+          .collection("invoices")
+          .where("companyID", "==", companyID);
         const snapshot = await customersRef.get();
 
-        const customerInvoicesCount = {};
+        const customerSales = {};
 
         snapshot.forEach((doc) => {
           const customerName = doc.data().customerName;
-          if (customerName in customerInvoicesCount) {
-            customerInvoicesCount[customerName]++;
-          } else {
-            customerInvoicesCount[customerName] = 1;
+          const amount = parseFloat(doc.data().total);
+          if (!isNaN(amount)) {
+            customerSales[customerName] =
+              (customerSales[customerName] || 0) + amount;
           }
         });
 
-        let maxInvoices = 0;
+        let maxSales = 0;
         let topCustomer = "";
-        Object.entries(customerInvoicesCount).forEach(([customer, count]) => {
-          if (count > maxInvoices) {
-            maxInvoices = count;
+        Object.entries(customerSales).forEach(([customer, sales]) => {
+          if (sales > maxSales) {
+            maxSales = sales;
             topCustomer = customer;
           }
         });
 
         setTopCustomer(topCustomer);
-        console.log("Top Customer:", topCustomer);
+        console.log("Top Customer by Sales:", topCustomer);
       } catch (error) {
         console.error("Error fetching top customer:", error);
       }
@@ -91,10 +137,25 @@ const MainScreen = ({ navigation }) => {
 
     const fetchLatestInvoices = async () => {
       try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching latest invoices...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
         const invoicesRef = db
           .collection("invoices")
+          .where("companyID", "==", companyID)
           .orderBy("date", "desc")
           .limit(6);
+
         const snapshot = await invoicesRef.get();
         const invoices = [];
         snapshot.forEach((doc) => {
@@ -209,6 +270,71 @@ const MainScreen = ({ navigation }) => {
       }
     };
 
+    const fetchExpensesData = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+
+        console.log("Fetching expenses data...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(endDate.getMonth() - 12);
+
+        const expensesSnapshot = await db
+          .collection("expenses")
+          .where("companyID", "==", companyID)
+          .where("date", ">=", startDate)
+          .where("date", "<=", endDate)
+          .get();
+
+        const expensesByMonth = {};
+
+        expensesSnapshot.forEach((doc) => {
+          const expenseData = doc.data();
+          const expenseDate = expenseData.date.toDate();
+          const monthYear = `${expenseDate.toLocaleString("default", {
+            month: "short",
+          })} ${expenseDate.getFullYear()}`;
+          if (monthYear in expensesByMonth) {
+            expensesByMonth[monthYear] += parseFloat(expenseData.cost);
+          } else {
+            expensesByMonth[monthYear] = parseFloat(expenseData.cost);
+          }
+        });
+
+        const formattedExpensesData = Object.entries(expensesByMonth).map(
+          ([monthYear, cost]) => ({
+            monthYear,
+            cost: cost.toFixed(2),
+          })
+        );
+
+        console.log("Expenses data fetched:", formattedExpensesData);
+        setExpensesData(formattedExpensesData);
+      } catch (error) {
+        console.error("Error fetching expenses data:", error);
+        throw new Error(
+          "Failed to fetch expenses data. Please try again later."
+        );
+      }
+    };
+    fetchTotalSales();
+    fetchNumOrders();
+    fetchTopCustomer();
+    fetchLatestInvoices();
+    fetchSalesData();
+    fetchUnpaidInvoices();
+    fetchExpensesData();
+
     const unsubscribe = db.collection("invoices").onSnapshot(() => {
       fetchTotalSales();
       fetchNumOrders();
@@ -216,10 +342,15 @@ const MainScreen = ({ navigation }) => {
       fetchLatestInvoices();
       fetchSalesData();
       fetchUnpaidInvoices();
+      fetchExpensesData();
     });
 
     return () => unsubscribe();
   }, []);
+
+  const expenseForMonth = expensesData.find((expense) => {
+    return expense.monthYear === selectedMonth;
+  });
 
   const navigateToProfile = () => {
     navigation.navigate("ProfileScreen");
@@ -260,6 +391,16 @@ const MainScreen = ({ navigation }) => {
       </TouchableOpacity>
     </Modal>
   );
+  console.log("Sales Data:", salesData);
+  console.log("Expenses Data:", expensesData);
+  console.log(
+    "Sales Data Months:",
+    salesData.map((data) => data.date)
+  );
+  console.log(
+    "Expenses Data Months:",
+    expensesData.map((data) => data.monthYear)
+  );
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.container}>
@@ -279,15 +420,24 @@ const MainScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       <View style={styles.additionalContentContainer}>
-        {salesData.length > 0 && (
+        {salesData.length > 0 && expensesData.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Total Sales Pre Month</Text>
+            <Text style={styles.chartTitle}>
+              Total Sales and Expenses Per Month
+            </Text>
             <BarChart
               data={{
                 labels: salesData.map((data) => data.date),
                 datasets: [
                   {
                     data: salesData.map((data) => parseFloat(data.total)),
+                    color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
+                  },
+                  {
+                    data: expensesData.map((expense) =>
+                      parseFloat(expense.cost)
+                    ),
+                    color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`,
                   },
                 ],
               }}
@@ -305,27 +455,30 @@ const MainScreen = ({ navigation }) => {
                 style: {
                   borderRadius: 16,
                 },
-              }}
-              style={styles.chart}
-              onPress={(event, chartData) => {
-                const { index } = chartData;
-                const selectedDate = salesData[index]?.date;
-                const numInvoices = salesData[index]?.numInvoices;
-                setSelectedMonth(selectedDate);
-                setNumInvoicesForMonth(numInvoices);
-                setIsInvoiceModalVisible(true);
+                barPercentage: 0.5,
+                barRadius: 5,
+                decimalPlaces: 2,
+                propsForLabels: {
+                  fontSize: 12,
+                },
+                propsForBackgroundLines: {
+                  strokeWidth: 1,
+                },
+                propsForVerticalLabels: {
+                  fontSize: 12,
+                },
+                color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
+                color: (opacity = 1) => `rgba(255, 0, 0, ${opacity})`,
               }}
             />
           </View>
         )}
-
         {/* Sales Information */}
         <View style={styles.salesInfoContainer}>
           <SalesInfoCard title="Total Sales" value={totalSales} />
           <SalesInfoCard title="Number of Orders" value={numOrders} />
           <SalesInfoCard title="Top Customer" value={topCustomer} />
         </View>
-
         {/* Latest Invoices */}
         <View style={styles.latestInvoicesContainer}>
           <Text style={styles.latestInvoicesTitle}>Latest Invoices</Text>
@@ -359,42 +512,47 @@ const MainScreen = ({ navigation }) => {
             </View>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
               <MenuItem
-                iconName="ios-barcode-outline"
+                iconName="barcode-outline"
                 text="Scanner"
                 onPress={() => handleMenuItemPress("Scanner")}
               />
               <MenuItem
-                iconName="ios-create-outline"
+                iconName="create-outline"
                 text="Input"
                 onPress={() => handleMenuItemPress("Input")}
               />
               <MenuItem
-                iconName="ios-analytics-outline"
+                iconName="analytics-outline"
                 text="Dashboard"
                 onPress={() => handleMenuItemPress("Dashboard")}
               />
               <MenuItem
-                iconName="ios-cloud-upload-outline"
+                iconName="cloud-upload-outline"
                 text="Forecasting"
                 onPress={() => handleMenuItemPress("UploadScreen")}
               />
               <MenuItem
-                iconName="ios-people-outline"
+                iconName="people-outline"
                 text="Admin"
                 onPress={() => handleMenuItemPress("Admin")}
               />
               <MenuItem
-                iconName="ios-document-outline"
+                iconName="document-outline"
                 text="Invoice"
                 onPress={() => handleMenuItemPress("InvoiceScreen")}
               />
               <MenuItem
-                iconName="ios-card-outline"
+                iconName="card-outline"
                 text="Payments"
                 onPress={() => handleMenuItemPress("Payments")}
               />
               <MenuItem
-                iconName="ios-log-out-outline"
+                iconName="briefcase"
+                text="Expenses"
+                onPress={() => handleMenuItemPress("Expenses")}
+              />
+              <MenuItem
+                iconName="log-out-outline"
                 text="Sign Out"
                 onPress={signOutUser}
               />
