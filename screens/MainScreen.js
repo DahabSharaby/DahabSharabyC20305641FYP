@@ -13,7 +13,7 @@ import { auth, db } from "../firebase";
 import { KeyboardAvoidingView } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { BarChart } from "react-native-chart-kit";
+import { BarChart, StackedBarChart } from "react-native-chart-kit";
 
 const MainScreen = ({ navigation }) => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -199,34 +199,48 @@ const MainScreen = ({ navigation }) => {
           .orderBy("date")
           .get();
 
-        const sales = {};
+        const salesData = {};
         salesSnapshot.forEach((doc) => {
           const saleData = doc.data();
-          const date = saleData.date
-            .toDate()
-            .toLocaleDateString("en-US", { month: "short" });
+          const date = saleData.date.toDate();
+          const monthYear = `${date.toLocaleString("en-US", {
+            month: "long",
+          })} ${date.getFullYear()}`;
+          const status = saleData.status;
           const total = parseFloat(saleData.total);
           if (!isNaN(total)) {
-            if (date in sales) {
-              sales[date].push(saleData);
+            if (!salesData[monthYear]) {
+              salesData[monthYear] = {
+                monthYear,
+                paid: 0,
+                unpaid: 0,
+                overdue: 0,
+              };
+            }
+            if (status === "paid") {
+              salesData[monthYear].paid += total;
             } else {
-              sales[date] = [saleData];
+              const today = new Date();
+              const lastDayOfMonth = new Date(
+                date.getFullYear(),
+                date.getMonth() + 1,
+                0
+              );
+              const daysUntilEndOfMonth = Math.ceil(
+                (lastDayOfMonth - date) / (1000 * 60 * 60 * 24)
+              );
+              if (daysUntilEndOfMonth >= 14) {
+                salesData[monthYear].overdue += total;
+              } else {
+                salesData[monthYear].unpaid += total;
+              }
             }
           }
         });
 
-        console.log("Sales data fetched:", sales);
-        const formattedSalesData = Object.entries(sales).map(
-          ([date, invoices]) => ({
-            date,
-            total: invoices
-              .reduce((acc, curr) => acc + parseFloat(curr.total), 0)
-              .toFixed(2),
-            numInvoices: invoices.length,
-          })
-        );
+        const formattedSalesData = Object.values(salesData);
 
-        console.log("Formatted sales data:", formattedSalesData);
+        console.log("Sales data fetched:", formattedSalesData);
         setSalesData(formattedSalesData);
       } catch (error) {
         console.error("Error fetching sales data:", error);
@@ -266,6 +280,30 @@ const MainScreen = ({ navigation }) => {
         }
       } catch (error) {
         console.error("Error fetching unpaid invoices:", error);
+      }
+    };
+
+    const getStatusColor = (status, date) => {
+      const invoiceDate = date.toDate();
+      const today = new Date();
+      const dateDiff = Math.ceil((today - invoiceDate) / (1000 * 60 * 60 * 24));
+
+      console.log("Invoice date:", invoiceDate);
+      console.log("Today's date:", today);
+      console.log("Date difference in days:", dateDiff);
+
+      if (status === "paid") {
+        console.log("Status is paid.");
+        return "#00FF00"; // Green
+      } else if (dateDiff >= 14) {
+        console.log("Invoice is older than 2 weeks.");
+        return "#FF0000"; // Red (older than 2 weeks)
+      } else if (dateDiff >= 7) {
+        console.log("Invoice is 1 week or more old.");
+        return "#FFFF00"; // Yellow (1 week or more)
+      } else {
+        console.log("Invoice is not paid and not older than 1 week.");
+        return "#FFA500"; // Orange (need to be paid)
       }
     };
 
@@ -342,15 +380,23 @@ const MainScreen = ({ navigation }) => {
         {salesData.length > 0 && (
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>Total Sales Per Month</Text>
-            <BarChart
+            <StackedBarChart
               data={{
-                labels: salesData.map((data) => data.date),
-                datasets: [
-                  {
-                    data: salesData.map((data) => parseFloat(data.total)),
-                    color: (opacity = 1) => `rgba(0, 0, 255, ${opacity})`,
-                  },
-                ],
+                labels: salesData.map((data) => {
+                  const [month, year] = data.monthYear.split(" ");
+                  const formattedDate = `${month.substring(
+                    0,
+                    3
+                  )}/${year.substring(2)}`;
+                  return formattedDate;
+                }),
+                legend: ["Paid", "Unpaid", "Overdue"],
+                data: salesData.map((data) => [
+                  data.paid,
+                  data.unpaid,
+                  data.overdue,
+                ]),
+                barColors: ["#00FF00", "#FFFF00", "#FF0000"],
               }}
               width={Dimensions.get("window").width - 40}
               height={220}
@@ -369,19 +415,59 @@ const MainScreen = ({ navigation }) => {
                 barPercentage: 0.5,
                 barRadius: 5,
                 decimalPlaces: 2,
-                propsForLabels: {
-                  fontSize: 12,
-                },
                 propsForBackgroundLines: {
                   strokeWidth: 1,
                 },
                 propsForVerticalLabels: {
                   fontSize: 12,
                 },
+                propsForHorizontalLabels: {
+                  fontSize: 12,
+                },
+                propsForYAxis: {
+                  fontSize: 12,
+                },
               }}
+              renderChart={(data) => (
+                <BarChart
+                  style={{ borderRadius: 16 }}
+                  data={data}
+                  width={Dimensions.get("window").width - 40}
+                  height={220}
+                  yAxisLabel="€"
+                  yAxisSuffix=""
+                  yAxisInterval={1}
+                  chartConfig={{
+                    backgroundColor: "white",
+                    backgroundGradientFrom: "white",
+                    backgroundGradientTo: "white",
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    barPercentage: 0.5,
+                    barRadius: 5,
+                    decimalPlaces: 2,
+                    propsForBackgroundLines: {
+                      strokeWidth: 1,
+                    },
+                    propsForVerticalLabels: {
+                      fontSize: 12,
+                    },
+                    propsForHorizontalLabels: {
+                      fontSize: 12,
+                    },
+                    propsForYAxis: {
+                      fontSize: 12,
+                    },
+                  }}
+                />
+              )}
             />
           </View>
         )}
+
         {/* Sales Information */}
         <View style={styles.salesInfoContainer}>
           <SalesInfoCard title="Total Sales" value={totalSales} />

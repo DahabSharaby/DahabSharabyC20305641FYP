@@ -21,15 +21,30 @@ const ProductScreen = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = db.collection("products").onSnapshot((snapshot) => {
-      const productDatas = [];
-      snapshot.forEach((doc) => {
-        productDatas.push({ id: doc.id, ...doc.data() });
-      });
-      setProducts(productDatas);
-    });
+    const fetchProducts = async () => {
+      try {
+        const companyID = await getCurrentUserCompanyID();
+        if (companyID) {
+          const unsubscribe = db
+            .collection("products")
+            .where("companyID", "==", companyID)
+            .onSnapshot((snapshot) => {
+              const productDatas = [];
+              snapshot.forEach((doc) => {
+                productDatas.push({ id: doc.id, ...doc.data() });
+              });
+              setProducts(productDatas);
+            });
+          return () => unsubscribe();
+        } else {
+          console.error("Company ID not found for the current user.");
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchProducts();
   }, []);
 
   const handleProductPress = (item) => {
@@ -137,7 +152,7 @@ const ProductScreen = () => {
   };
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
+    <View style={{ flex: 1, padding: 20, top: 30 }}>
       <View
         style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}
       >

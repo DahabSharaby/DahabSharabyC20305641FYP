@@ -24,16 +24,31 @@ export default function CustomerScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = db.collection("customers").onSnapshot((snapshot) => {
-      const customersData = [];
-      snapshot.forEach((doc) => {
-        customersData.push({ id: doc.id, ...doc.data() });
-      });
-      setCustomers(customersData);
-      setFilteredCustomers(customersData);
-    });
+    const fetchCustomers = async () => {
+      try {
+        const companyID = await getCurrentUserCompanyID();
+        if (companyID) {
+          const unsubscribe = db
+            .collection("customers")
+            .where("companyID", "==", companyID)
+            .onSnapshot((snapshot) => {
+              const customersData = [];
+              snapshot.forEach((doc) => {
+                customersData.push({ id: doc.id, ...doc.data() });
+              });
+              setCustomers(customersData);
+              setFilteredCustomers(customersData);
+            });
+          return () => unsubscribe();
+        } else {
+          console.error("Company ID not found for the current user.");
+        }
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchCustomers();
   }, []);
 
   const getCurrentUserCompanyID = async () => {
@@ -158,7 +173,7 @@ export default function CustomerScreen() {
   };
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
+    <View style={{ flex: 1, padding: 20, top: 30 }}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <TextInput
           style={{

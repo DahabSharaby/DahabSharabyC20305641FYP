@@ -58,11 +58,7 @@ export default function App() {
           component={ScannerScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen
-          name="Input"
-          component={InputScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Input" component={InputScreen} />
         <Stack.Screen
           name="Dashboard"
           component={DashboardScreen}
@@ -88,11 +84,7 @@ export default function App() {
           component={DeleteAccountScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen
-          name="ScanScreen"
-          component={ScanScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="ScanScreen" component={ScanScreen} />
         <Stack.Screen
           name="InvoiceScreen"
           component={InvoiceScreen}

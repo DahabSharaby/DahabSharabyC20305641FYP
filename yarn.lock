@@ -1389,10 +1389,10 @@
     mv "~2"
     safe-json-stringify "~1"
 
-"@expo/cli@0.18.9":
-  version "0.18.9"
-  resolved "https://registry.yarnpkg.com/@expo/cli/-/cli-0.18.9.tgz#a4ff6ae8e3c460b43bb0e7c2093c8174950f02d1"
-  integrity sha512-CoxiISJqI7bymGzIflm8JxGkSg8hoZ2r7wfAN5bD6rKTQ83m8LiYGCZ/AQKT2sTNrnHSA+tvjuqwycvxGzIyVA==
+"@expo/cli@0.18.10":
+  version "0.18.10"
+  resolved "https://registry.yarnpkg.com/@expo/cli/-/cli-0.18.10.tgz#b3dc9061af1a501576761e65087ffba117f71d45"
+  integrity sha512-cuAE060tcX4Mn+sF+tGAchGDsTNzwCUB7ioFGB3OrvxoU3idsqZJPs6xMt5Utuuy7QDGPnOn68H0vC4kDsXkUQ==
   dependencies:
     "@babel/runtime" "^7.20.0"
     "@expo/code-signing-certificates" "0.0.5"
@@ -2831,6 +2831,11 @@
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/@react-native-clipboard/clipboard/-/clipboard-1.14.1.tgz#835f82fc86881a0808a8405f2576617bb5383554"
   integrity sha512-SM3el0A28SwoeJljVNhF217o0nI4E7RfalLmuRQcT1/7tGcxUjgFa3jyrEndYUct8/uxxK5EUNGUu1YEDqzxqw==
+
+"@react-native-community/checkbox@^0.5.17":
+  version "0.5.17"
+  resolved "https://registry.yarnpkg.com/@react-native-community/checkbox/-/checkbox-0.5.17.tgz#80dd335ca5c61ac2ca4525a21d8fef3f7a021ef7"
+  integrity sha512-ZZx/eOH3SIxBg+hvA2zRd7lX5zPQEWcZU8C8Dn7WLdpJkiTkPmIUDFHWrmzxCnwZcyoD+BIt6gUZPKGGb9WmeQ==
 
 "@react-native-community/cli-clean@13.6.6":
   version "13.6.6"
@@ -5893,10 +5898,10 @@ expo-modules-autolinking@1.11.1:
     find-up "^5.0.0"
     fs-extra "^9.1.0"
 
-expo-modules-core@1.12.9:
-  version "1.12.9"
-  resolved "https://registry.yarnpkg.com/expo-modules-core/-/expo-modules-core-1.12.9.tgz#d14e94c5c347d01050d41ffae572327f39465f17"
-  integrity sha512-t0HrPwelNFqGiaa9RsDt2ttDekAbgHjcq4PBovNS0jyhRwBbDDb465xoMxG+V4eNLBYTP+BVgxMHK+TPxT2QgQ==
+expo-modules-core@1.12.10:
+  version "1.12.10"
+  resolved "https://registry.yarnpkg.com/expo-modules-core/-/expo-modules-core-1.12.10.tgz#44c5510e8fa16936c48fa986b3a3429c207381be"
+  integrity sha512-aS4imfr7fuUtcx+j/CHuG6ohNSThyCzGRh1kKjQTDcO0/CqDO2cSFnxf7n2vpiRFgyoMFJvFFtW/zIzVXiC2Tw==
   dependencies:
     invariant "^2.2.4"
 
@@ -5930,13 +5935,13 @@ expo-status-bar@~1.12.1:
   resolved "https://registry.yarnpkg.com/expo-status-bar/-/expo-status-bar-1.12.1.tgz#52ce594aab5064a0511d14375364d718ab78aa66"
   integrity sha512-/t3xdbS8KB0prj5KG5w7z+wZPFlPtkgs95BsmrP/E7Q0xHXTcDcQ6Cu2FkFuRM+PKTb17cJDnLkawyS5vDLxMA==
 
-expo@51:
-  version "51.0.0"
-  resolved "https://registry.yarnpkg.com/expo/-/expo-51.0.0.tgz#8e02950b242b7f94edfa9fc5020a6bf8508209c1"
-  integrity sha512-qY4gECM+YDWgmv0rTzdlrbvGKYLMy/xQ6FtYp2/HG+yF+XpqpKTCNQ2RZN97DRIXlPmxhPd/S5IUD46kW3TQaQ==
+expo@~51.0.2:
+  version "51.0.2"
+  resolved "https://registry.yarnpkg.com/expo/-/expo-51.0.2.tgz#14de27d8d8addec5848285a6e4bd8792d07fc3f2"
+  integrity sha512-aRKrheMMQBcNDg2SBjW5kcSN5G58bdIpsxeSQ65Bx18DFLXjPv5UaU9kzIWRAcxaPtgictn9ut9IJQVZKChNxQ==
   dependencies:
     "@babel/runtime" "^7.20.0"
-    "@expo/cli" "0.18.9"
+    "@expo/cli" "0.18.10"
     "@expo/config" "9.0.1"
     "@expo/config-plugins" "8.0.4"
     "@expo/metro-config" "0.18.3"
@@ -5947,7 +5952,7 @@ expo@51:
     expo-font "~12.0.4"
     expo-keep-awake "~13.0.1"
     expo-modules-autolinking "1.11.1"
-    expo-modules-core "1.12.9"
+    expo-modules-core "1.12.10"
     fbemitter "^3.0.0"
     whatwg-url-without-unicode "8.0.0-3"
 
@@ -9893,10 +9898,10 @@ react-native-ratings@8.0.4:
   dependencies:
     lodash "^4.17.15"
 
-react-native-reanimated@3.10.0:
-  version "3.10.0"
-  resolved "https://registry.yarnpkg.com/react-native-reanimated/-/react-native-reanimated-3.10.0.tgz#7367f0ae9c79193315f4f1ef4d359bfac678a761"
-  integrity sha512-oiQiO+iJ8HTXTli94+Cl5R7nd+TzZf+3MYnMKWtnVDDCxFsqBgpkKO2Xp2ZhZyseXY/JDdH0//E7LlPQRRxpXg==
+react-native-reanimated@~3.10.1:
+  version "3.10.1"
+  resolved "https://registry.yarnpkg.com/react-native-reanimated/-/react-native-reanimated-3.10.1.tgz#3c37d1100bbba0065df39c96aab0c1ff1b50c0fa"
+  integrity sha512-sfxg6vYphrDc/g4jf/7iJ7NRi+26z2+BszPmvmk0Vnrz6FL7HYljJqTf531F1x6tFmsf+FEAmuCtTUIXFLVo9w==
   dependencies:
     "@babel/plugin-transform-arrow-functions" "^7.0.0-0"
     "@babel/plugin-transform-nullish-coalescing-operator" "^7.0.0-0"
@@ -9925,10 +9930,10 @@ react-native-size-matters@^0.3.1:
   resolved "https://registry.npmjs.org/react-native-size-matters/-/react-native-size-matters-0.3.1.tgz"
   integrity sha512-mKOfBLIBFBcs9br1rlZDvxD5+mAl8Gfr5CounwJtxI6Z82rGrMO+Kgl9EIg3RMVf3G855a85YVqHJL2f5EDRlw==
 
-react-native-svg@15.2.0-rc.0:
-  version "15.2.0-rc.0"
-  resolved "https://registry.yarnpkg.com/react-native-svg/-/react-native-svg-15.2.0-rc.0.tgz#bdad8f7865739ee4b7a8817d0b9fcfcb7550c3ed"
-  integrity sha512-rA2milxKXUW+VDzd2y/kWRCS8EJLUAAaU5PwQ/xB2TnzwoW1ivU8hkgwqbBhmGmr8LEa9HJoPUnxD7H7yAVPdA==
+react-native-svg@15.2.0:
+  version "15.2.0"
+  resolved "https://registry.yarnpkg.com/react-native-svg/-/react-native-svg-15.2.0.tgz#9561a6b3bd6b44689f437ba13182afee33bd5557"
+  integrity sha512-R0E6IhcJfVLsL0lRmnUSm72QO+mTqcAOM5Jb8FVGxJqX3NfJMlMP0YyvcajZiaRR8CqQUpEoqrY25eyZb006kw==
   dependencies:
     css-select "^5.1.0"
     css-tree "^1.1.3"

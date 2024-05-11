@@ -17,7 +17,7 @@ const CompanyReg = ({ navigation }) => {
   const [CompanyName, setCompanyName] = useState("");
   const [num, setNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [adress, setAdress] = useState("");
+  const [address, setAddress] = useState("");
   const [companyRegNumber, setCompanyRegNumber] = useState("");
   const [message, setMessage] = useState("");
 
@@ -56,7 +56,7 @@ const CompanyReg = ({ navigation }) => {
           companyName: CompanyName,
           companyNumber: Number(num),
           companyID: companyID,
-          adress: adress,
+          address: address,
           companyRegNumber: Number(companyRegNumber),
         });
 
@@ -77,7 +77,7 @@ const CompanyReg = ({ navigation }) => {
       setCompanyName("");
       setNumber("");
       setEmail("");
-      setAdress("");
+      setAddress("");
       setCompanyRegNumber("");
       setMessage("");
     } catch (error) {
@@ -87,7 +87,7 @@ const CompanyReg = ({ navigation }) => {
   };
 
   const validateFields = () => {
-    if (!CompanyName || !num || !email || !adress || !companyRegNumber) {
+    if (!CompanyName || !num || !email || !address || !companyRegNumber) {
       Alert.alert("Validation Error", "Please fill in all fields.");
       return false;
     }
@@ -122,9 +122,9 @@ const CompanyReg = ({ navigation }) => {
         />
 
         <Input
-          placeholder="Adress"
-          value={adress}
-          onChangeText={(text) => setAdress(text)}
+          placeholder="Address"
+          value={address}
+          onChangeText={(text) => setAddress(text)}
         />
 
         <Input
