@@ -460,13 +460,6 @@ const ScanScreen = ({ route }) => {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Customer")}
-        >
-          <Text style={styles.text}>Add Customer</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
           onPress={() => navigation.navigate("Product")}
         >
           <Text style={styles.text}>Add Product</Text>

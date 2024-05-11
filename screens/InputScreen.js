@@ -32,28 +32,37 @@ export function InputScreen({ navigation }) {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const collectionRef = db.collection("customers");
-        const querySnapshot = await collectionRef.get();
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
 
-        const data = [];
-        querySnapshot.forEach((doc) => {
-          const customerDetails = {
-            id: doc.id,
-            name: doc.data().customerName,
-            address: doc.data().customerAddress,
-            phoneNumber: doc.data().phoneNumber,
-          };
-          data.push(customerDetails);
-        });
+        if (companyID) {
+          const collectionRef = db
+            .collection("customers")
+            .where("companyID", "==", companyID);
+          const querySnapshot = await collectionRef.get();
 
-        setCustomerData(data);
+          const data = [];
+          querySnapshot.forEach((doc) => {
+            const customerDetails = {
+              id: doc.id,
+              name: doc.data().customerName,
+              address: doc.data().customerAddress,
+              phoneNumber: doc.data().phoneNumber,
+            };
+            data.push(customerDetails);
+          });
+
+          setCustomerData(data);
+        }
       } catch (error) {
         console.error("Firestore Error:", error);
       }
     };
 
-    fetchCustomers();
-  }, []);
+    if (currentUser) {
+      fetchCustomers();
+    }
+  }, [currentUser]);
 
   const handleCustomerNameChange = (text) => {
     setCustomerName(text);
@@ -359,6 +368,7 @@ export function InputScreen({ navigation }) {
         <TouchableOpacity style={styles.button} onPress={addProduct}>
           <Text style={styles.text}>Add Product</Text>
         </TouchableOpacity>
+
         <Text>{getTotalAmount()}</Text>
         <Button title="Save Invoice" onPress={handleSaveInvoice} />
       </View>
@@ -372,7 +382,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 10,
-    top: 40,
   },
   input: {
     borderWidth: 1,

@@ -196,6 +196,10 @@ const ProfileScreen = () => {
             <Text style={styles.value}>{companyData.companyEmail}</Text>
             <Text style={styles.label}>Company Number:</Text>
             <Text style={styles.value}>{companyData.companyNumber}</Text>
+            <Text style={styles.label}>Company Reg Number:</Text>
+            <Text style={styles.value}>{companyData.companyRegNumber}</Text>
+            <Text style={styles.label}>Company Address:</Text>
+            <Text style={styles.value}>{companyData.address}</Text>
           </View>
         )}
       </View>
@@ -209,10 +213,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
-    top: 40,
+    top: 30,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
     marginBottom: 20,
   },
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   userDataContainer: {
-    marginBottom: 20,
+    marginBottom: 10,
     backgroundColor: "#f9f9f9",
     padding: 15,
     borderRadius: 10,
