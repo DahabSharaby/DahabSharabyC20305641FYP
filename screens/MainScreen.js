@@ -15,6 +15,7 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { BarChart, StackedBarChart } from "react-native-chart-kit";
 
+
 const MainScreen = ({ navigation }) => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [totalSales, setTotalSales] = useState(0);
@@ -26,8 +27,19 @@ const MainScreen = ({ navigation }) => {
   const [numInvoicesForMonth, setNumInvoicesForMonth] = useState(0);
   const [isInvoiceModalVisible, setIsInvoiceModalVisible] = useState(false);
   const [unpaidInvoicesCount, setUnpaidInvoicesCount] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0); 
+  const [topSellingProduct, setTopSellingProduct] = useState("");
+  const [totalProfit, setTotalProfit] = useState(0);
 
   useEffect(() => {
+
+    const calculateTotalProfit = () => {
+      const profit = totalSales - totalExpenses;
+      setTotalProfit(parseFloat(profit.toFixed(2)));
+    };
+    calculateTotalProfit();
+  
+
     const fetchTotalSales = async () => {
       try {
         const currentUser = auth.currentUser;
@@ -198,63 +210,155 @@ const MainScreen = ({ navigation }) => {
           .where("date", "<=", endDate)
           .orderBy("date")
           .get();
-
-        const salesData = {};
-        salesSnapshot.forEach((doc) => {
-          const saleData = doc.data();
-          const date = saleData.date.toDate();
-          const monthYear = `${date.toLocaleString("en-US", {
-            month: "long",
-          })} ${date.getFullYear()}`;
-          const status = saleData.status;
-          const total = parseFloat(saleData.total);
-          if (!isNaN(total)) {
-            if (!salesData[monthYear]) {
-              salesData[monthYear] = {
-                monthYear,
-                paid: 0,
-                unpaid: 0,
-                overdue: 0,
-              };
-            }
-            if (status === "paid") {
-              salesData[monthYear].paid += total;
-            } else {
-              const today = new Date();
-              const lastDayOfMonth = new Date(
-                date.getFullYear(),
-                date.getMonth() + 1,
-                0
-              );
-              const daysUntilEndOfMonth = Math.ceil(
-                (lastDayOfMonth - date) / (1000 * 60 * 60 * 24)
-              );
-              if (daysUntilEndOfMonth >= 14) {
-                salesData[monthYear].overdue += total;
-              } else {
-                salesData[monthYear].unpaid += total;
+          const salesData = {};
+          salesSnapshot.forEach((doc) => {
+            const saleData = doc.data();
+            const date = saleData.date; 
+            if (date && date.toDate) {
+              const invoiceDate = date.toDate(); 
+              const monthYear = `${invoiceDate.toLocaleString("en-US", {
+                month: "long",
+              })} ${invoiceDate.getFullYear()}`;
+              const status = saleData.status;
+              const total = parseFloat(saleData.total);
+              if (!isNaN(total)) {
+                if (!salesData[monthYear]) {
+                  salesData[monthYear] = {
+                    monthYear,
+                    paid: 0,
+                    unpaid: 0,
+                    overdue: 0,
+                  };
+                }
+                const today = new Date();
+                const dateDiff = Math.ceil((today - invoiceDate) / (1000 * 60 * 60 * 24));
+      
+                if (status === "paid") {
+                  salesData[monthYear].paid += total;
+                } else if (dateDiff >= 14) {
+                  salesData[monthYear].overdue += total;
+                } else {
+                  salesData[monthYear].unpaid += total;
+                }
               }
+            } else {
+              console.error("Date is undefined or does not have a toDate method:", date);
             }
+          });
+      
+          const formattedSalesData = Object.values(salesData);
+      
+          console.log("Sales data fetched:", formattedSalesData);
+          setSalesData(formattedSalesData);
+        } catch (error) {
+          console.error("Error fetching sales data:", error);
+        }
+      };
+
+    // const fetchUnpaidInvoices = async () => {
+    //   try {
+    //     const currentUser = auth.currentUser;
+    //     if (!currentUser) {
+    //       throw new Error("Current user not found.");
+    //     }
+
+    //     console.log("Fetching unpaid invoices...");
+    //     const userDoc = await db.collection("users").doc(currentUser.uid).get();
+    //     const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+
+    //     if (!companyID) {
+    //       throw new Error("Company ID not found for the current user.");
+    //     }
+
+    //     const unpaidInvoicesSnapshot = await db
+    //       .collection("invoices")
+    //       .where("companyID", "==", companyID)
+    //       .where("status", "!=", "paid")
+    //       .get();
+
+    //     const unpaidInvoicesCount = unpaidInvoicesSnapshot.size;
+    //     setUnpaidInvoicesCount(unpaidInvoicesCount);
+
+    //     if (unpaidInvoicesCount > 0) {
+    //       Alert.alert(
+    //         "Unpaid Invoices Notification",
+    //         `You have ${unpaidInvoicesCount} unpaid invoices.`,
+    //         [{ text: "OK", onPress: () => console.log("OK Pressed") }]
+    //       );
+    //     }
+    //   } catch (error) {
+    //     console.error("Error fetching unpaid invoices:", error);
+    //   }
+    // }; fetchUnpaidInvoices();
+
+    // const getStatusColor = (status, date) => {
+    //   const invoiceDate = date.toDate();
+    //   const today = new Date();
+    //   const dateDiff = Math.ceil((today - invoiceDate) / (1000 * 60 * 60 * 24));
+
+    //   console.log("Invoice date:", invoiceDate);
+    //   console.log("Today's date:", today);
+    //   console.log("Date difference in days:", dateDiff);
+
+    //   if (status === "paid") {
+    //     console.log("Status is paid.");
+    //     return "#00FF00"; // Green
+    //   } else if (dateDiff >= 14) {
+    //     console.log("Invoice is older than 2 weeks.");
+    //     return "#FF0000"; // Red (older than 2 weeks)
+    //   } else if (dateDiff >= 7) {
+    //     console.log("Invoice is 1 week or more old.");
+    //     return "#FFFF00"; // Yellow (1 week or more)
+    //   } else {
+    //     console.log("Invoice is not paid and not older than 1 week.");
+    //     return "#FFA500"; // Orange (need to be paid)
+    //   }
+    // };
+    
+    const fetchTotalExpenses = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          throw new Error("Current user not found.");
+        }
+    
+        console.log("Fetching total expenses...");
+        const userDoc = await db.collection("users").doc(currentUser.uid).get();
+        const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
+    
+        if (!companyID) {
+          throw new Error("Company ID not found for the current user.");
+        }
+    
+        const expensesRef = db
+          .collection("expenses")
+          .where("companyID", "==", companyID);
+        const snapshot = await expensesRef.get();
+        let total = 0;
+        snapshot.forEach((doc) => {
+          const cost = parseFloat(doc.data().cost);
+          if (!isNaN(cost)) {
+            total += cost;
           }
         });
-
-        const formattedSalesData = Object.values(salesData);
-
-        console.log("Sales data fetched:", formattedSalesData);
-        setSalesData(formattedSalesData);
+        setTotalExpenses(total);
+        console.log("Total Expenses:", total);
+        
+        calculateTotalProfit();
       } catch (error) {
-        console.error("Error fetching sales data:", error);
+        console.error("Error fetching total expenses:", error);
       }
     };
+    
 
-    const fetchUnpaidInvoices = async () => {
+    const fetchTopSellingProduct = async () => {
       try {
         const currentUser = auth.currentUser;
         if (!currentUser) {
           throw new Error("Current user not found.");
         }
 
-        console.log("Fetching unpaid invoices...");
+        console.log("Fetching top selling product...");
         const userDoc = await db.collection("users").doc(currentUser.uid).get();
         const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
 
@@ -262,50 +366,42 @@ const MainScreen = ({ navigation }) => {
           throw new Error("Company ID not found for the current user.");
         }
 
-        const unpaidInvoicesSnapshot = await db
-          .collection("invoices")
-          .where("companyID", "==", companyID)
-          .where("status", "!=", "paid")
-          .get();
+        const invoicesRef = db.collection("invoices").where("companyID", "==", companyID);
+        const snapshot = await invoicesRef.get();
 
-        const unpaidInvoicesCount = unpaidInvoicesSnapshot.size;
-        setUnpaidInvoicesCount(unpaidInvoicesCount);
+        const productSales = {};
 
-        if (unpaidInvoicesCount > 0) {
-          Alert.alert(
-            "Unpaid Invoices Notification",
-            `You have ${unpaidInvoicesCount} unpaid invoices.`,
-            [{ text: "OK", onPress: () => console.log("OK Pressed") }]
-          );
-        }
+        snapshot.forEach((doc) => {
+          const productList = doc.data().productList;
+          productList.forEach((product) => {
+            const productName = product.name;
+            const quantity = parseInt(product.quantity);
+            if (!isNaN(quantity)) {
+              productSales[productName] = (productSales[productName] || 0) + quantity;
+            }
+          });
+        });
+
+        let topSellingProduct = "";
+        let maxQuantity = 0;
+
+        Object.entries(productSales).forEach(([product, quantity]) => {
+          if (quantity > maxQuantity) {
+            maxQuantity = quantity;
+            topSellingProduct = product;
+          }
+        });
+
+        console.log("Top Selling Product:", topSellingProduct);
+        console.log("Total Quantity Sold:", maxQuantity);
+
+        setTopSellingProduct(`${topSellingProduct} (${maxQuantity})`);
       } catch (error) {
-        console.error("Error fetching unpaid invoices:", error);
+        console.error("Error fetching top selling product:", error);
       }
     };
-
-    const getStatusColor = (status, date) => {
-      const invoiceDate = date.toDate();
-      const today = new Date();
-      const dateDiff = Math.ceil((today - invoiceDate) / (1000 * 60 * 60 * 24));
-
-      console.log("Invoice date:", invoiceDate);
-      console.log("Today's date:", today);
-      console.log("Date difference in days:", dateDiff);
-
-      if (status === "paid") {
-        console.log("Status is paid.");
-        return "#00FF00"; // Green
-      } else if (dateDiff >= 14) {
-        console.log("Invoice is older than 2 weeks.");
-        return "#FF0000"; // Red (older than 2 weeks)
-      } else if (dateDiff >= 7) {
-        console.log("Invoice is 1 week or more old.");
-        return "#FFFF00"; // Yellow (1 week or more)
-      } else {
-        console.log("Invoice is not paid and not older than 1 week.");
-        return "#FFA500"; // Orange (need to be paid)
-      }
-    };
+    
+  
 
     const unsubscribe = db.collection("invoices").onSnapshot(() => {
       fetchTotalSales();
@@ -313,12 +409,23 @@ const MainScreen = ({ navigation }) => {
       fetchTopCustomer();
       fetchLatestInvoices();
       fetchSalesData();
-      fetchUnpaidInvoices();
+      fetchTotalExpenses();
+      fetchTopSellingProduct();
+      calculateTotalProfit();
+      
     });
 
-    return () => unsubscribe();
-  }, []);
+    const unsubscribe2 = db.collection("expenses").onSnapshot(() => {
+      fetchTotalSales();
+      fetchTotalExpenses();
+      calculateTotalProfit();
+    });
 
+    return () => unsubscribe() ,unsubscribe2() ;
+
+    
+  }, [totalSales, totalExpenses , totalProfit]);
+  
   const navigateToProfile = () => {
     navigation.navigate("ProfileScreen");
   };
@@ -377,7 +484,7 @@ const MainScreen = ({ navigation }) => {
       </TouchableOpacity>
 
       <View style={styles.additionalContentContainer}>
-        {salesData.length > 0 && (
+      {salesData.length > 0 && (
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>Total Sales Per Month</Text>
             <StackedBarChart
@@ -396,9 +503,9 @@ const MainScreen = ({ navigation }) => {
                   data.unpaid,
                   data.overdue,
                 ]),
-                barColors: ["#00FF00", "#FFFF00", "#FF0000"],
+                barColors: ["#00FF00", "#FFFF00", "#FF0000"], // Green, Yellow, Red
               }}
-              width={Dimensions.get("window").width - 40}
+              width={Dimensions.get("window").width - 20}
               height={220}
               yAxisLabel="€"
               yAxisSuffix=""
@@ -419,51 +526,12 @@ const MainScreen = ({ navigation }) => {
                   strokeWidth: 1,
                 },
                 propsForVerticalLabels: {
-                  fontSize: 12,
+                  fontSize: 10,
                 },
                 propsForHorizontalLabels: {
-                  fontSize: 12,
-                },
-                propsForYAxis: {
-                  fontSize: 12,
+                  fontSize: 8,
                 },
               }}
-              renderChart={(data) => (
-                <BarChart
-                  style={{ borderRadius: 16 }}
-                  data={data}
-                  width={Dimensions.get("window").width - 40}
-                  height={220}
-                  yAxisLabel="€"
-                  yAxisSuffix=""
-                  yAxisInterval={1}
-                  chartConfig={{
-                    backgroundColor: "white",
-                    backgroundGradientFrom: "white",
-                    backgroundGradientTo: "white",
-                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    style: {
-                      borderRadius: 16,
-                    },
-                    barPercentage: 0.5,
-                    barRadius: 5,
-                    decimalPlaces: 2,
-                    propsForBackgroundLines: {
-                      strokeWidth: 1,
-                    },
-                    propsForVerticalLabels: {
-                      fontSize: 12,
-                    },
-                    propsForHorizontalLabels: {
-                      fontSize: 12,
-                    },
-                    propsForYAxis: {
-                      fontSize: 12,
-                    },
-                  }}
-                />
-              )}
             />
           </View>
         )}
@@ -473,6 +541,11 @@ const MainScreen = ({ navigation }) => {
           <SalesInfoCard title="Total Sales" value={totalSales} />
           <SalesInfoCard title="Number of Orders" value={numOrders} />
           <SalesInfoCard title="Top Customer" value={topCustomer} />
+        </View>
+        <View style={styles.salesInfoContainer2}>
+          <SalesInfoCard title="Total Expenses" value={totalExpenses} />
+          <SalesInfoCard title="Top Selling Product" value={topSellingProduct} />
+          <SalesInfoCard title="Total Profit" value={totalProfit} />
         </View>
         {/* Latest Invoices */}
         <View style={styles.latestInvoicesContainer}>
@@ -521,11 +594,7 @@ const MainScreen = ({ navigation }) => {
                 text="Dashboard"
                 onPress={() => handleMenuItemPress("Dashboard")}
               />
-              <MenuItem
-                iconName="cloud-upload-outline"
-                text="Forecasting"
-                onPress={() => handleMenuItemPress("UploadScreen")}
-              />
+
               <MenuItem
                 iconName="people-outline"
                 text="Admin"
@@ -579,7 +648,7 @@ const SalesInfoCard = ({ title, value }) => {
   return (
     <View style={styles.salesInfoCard}>
       <Text style={styles.salesInfoTitle}>{title}</Text>
-      {title === "Total Sales" ? (
+      {title === "Total Sales" || title === "Total Expenses" || title === "Total Profit" ? (
         <Text style={styles.salesInfoValue}>€{value} </Text>
       ) : (
         <Text style={styles.salesInfoValue}>{value}</Text>
@@ -629,13 +698,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     width: "30%",
-    marginBottom: 20,
+    marginBottom: 5,
   },
   salesInfoTitle: {
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 5,
     color: "white",
+  },
+  salesInfoContainer2: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 0,
+    
   },
   salesInfoValue: {
     fontSize: 14,

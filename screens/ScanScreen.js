@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Switch,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
@@ -32,8 +33,8 @@ const ScanScreen = ({ route }) => {
   const [customerNameStatus, setCustomerNameStatus] = useState(false);
   const [customerAddressStatus, setCustomerAddressStatus] = useState(false);
   const [phoneNumberStatus, setPhoneNumberStatus] = useState(false);
-  const [customerExists, setCustomerExists] = useState(true);
-  const [productExists, setProductExists] = useState(true);
+  const [isPaid, setIsPaid] = useState(false); 
+
 
   const navigation = useNavigation();
 
@@ -183,24 +184,24 @@ const ScanScreen = ({ route }) => {
         );
         return;
       }
-
+  
       // Upload the image to Firebase Storage
       const imageFileName = `invoice_${Date.now()}.jpg`;
       const storageRef = firebase.storage().ref(`invoices/${imageFileName}`);
       const response = await fetch(imageUri);
       const blob = await response.blob();
       await storageRef.put(blob);
-
+  
       const downloadURL = await storageRef.getDownloadURL();
-
-      // Check if the customer exists
+  
+      // Check if the customer exists and if their phone and address match
       const trimmedCustomerName = customerName.trim();
       const customerSnapshot = await db
         .collection("customers")
         .where("customerName", "==", trimmedCustomerName)
         .get();
       const customerExists = !customerSnapshot.empty;
-
+  
       if (!customerExists) {
         Alert.alert(
           "Customer does not exist",
@@ -218,9 +219,22 @@ const ScanScreen = ({ route }) => {
         );
         return;
       }
-
-      // Check if all products exist
+  
+      const customerData = customerSnapshot.docs[0].data();
+      if (
+        customerData.phoneNumber !== phoneNumber ||
+        customerData.customerAddress !== customerAddress
+      ) {
+        Alert.alert(
+          "Customer details do not match",
+          "The provided phone number or address does not match the existing records."
+        );
+        return;
+      }
+  
+      // Check if all products exist and if the prices match
       const nonExistentProducts = [];
+      const priceMismatchProducts = [];
       for (const product of productList) {
         const productSnapshot = await db
           .collection("products")
@@ -228,35 +242,44 @@ const ScanScreen = ({ route }) => {
           .get();
         if (productSnapshot.empty) {
           nonExistentProducts.push(product.name);
+        } else {
+          const productData = productSnapshot.docs[0].data();
+          if (productData.productPrice !== parseFloat(product.price)) {
+            priceMismatchProducts.push(product.name);
+          }
         }
       }
-
+  
       if (nonExistentProducts.length > 0) {
         Alert.alert(
           "One or more products do not exist",
           `The following products do not exist in the database: ${nonExistentProducts.join(
             ", "
-          )}`,
-          [
-            {
-              text: "OK",
-              onPress: () => {},
-            },
-          ]
+          )}`
         );
         return;
       }
-
+  
+      if (priceMismatchProducts.length > 0) {
+        Alert.alert(
+          "Price mismatch",
+          `The following products have a price mismatch: ${priceMismatchProducts.join(
+            ", "
+          )}`
+        );
+        return;
+      }
+  
       const total = calculateTotal();
       const currentUser = auth.currentUser;
       const userDoc = await db.collection("users").doc(currentUser.uid).get();
       const companyID = userDoc.exists ? userDoc.data()?.companyID : null;
-
+  
       if (!companyID) {
         Alert.alert("Company ID not found for the current user.");
         return;
       }
-
+  
       const invoiceData = {
         invoiceNumber: invoiceNumber,
         companyID: companyID,
@@ -267,8 +290,9 @@ const ScanScreen = ({ route }) => {
         productList,
         total,
         imageURL: downloadURL,
+        status: isPaid ? "paid" : "unpaid",
       };
-
+  
       await db.collection("invoices").doc(invoiceNumber).set(invoiceData);
       Alert.alert("Invoice details saved successfully!", "", [
         {
@@ -281,7 +305,7 @@ const ScanScreen = ({ route }) => {
             setProductList([]);
             setInvoiceNumber("");
             setImageUri(null);
-
+            setIsPaid(false);
             navigation.navigate("Main");
           },
         },
@@ -291,6 +315,8 @@ const ScanScreen = ({ route }) => {
       Alert.alert("Failed to save invoice details.");
     }
   };
+  
+  
 
   const generateInvoiceNumber = async () => {
     while (true) {
@@ -364,6 +390,14 @@ const ScanScreen = ({ route }) => {
             maximumDate={new Date()}
           />
         )}
+        <View style={styles.paymentStatusContainer}>
+          <Text style={styles.paymentStatusText}>Paid:</Text>
+          <Switch
+            value={isPaid}
+            onValueChange={(value) => setIsPaid(value)}
+            style={styles.switch}
+          />
+        </View>
 
         <View style={styles.fieldContainer}>
           <Text style={{ color: customerNameStatus ? "green" : "red" }}>
@@ -378,7 +412,13 @@ const ScanScreen = ({ route }) => {
               setCustomerNameStatus(!!text);
             }}
           />
+     <TouchableOpacity
+       style={styles.addButton}
+            onPress={() => navigation.navigate("Customer")}>
+            <Text style={styles.addButtonText}>+</Text>
+    </TouchableOpacity>
         </View>
+        
 
         <View style={styles.fieldContainer}>
           <Text style={{ color: customerAddressStatus ? "green" : "red" }}>
@@ -414,7 +454,7 @@ const ScanScreen = ({ route }) => {
           <Text style={styles.text}>Products list :</Text>
           {productList.map((item, index) => (
             <View style={styles.productBox} key={index}>
-              <Text>Product {index + 1}:</Text>
+              <Text>Product  {index + 1}:</Text>
               <DeleteProductButton
                 index={index}
                 onDelete={handleDeleteProduct}
@@ -426,6 +466,12 @@ const ScanScreen = ({ route }) => {
                 value={item.name}
                 onChangeText={(text) => updateProduct(index, "name", text)}
               />
+                   <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => navigation.navigate("Product")}
+                    >
+                   <Text style={styles.addButtonText}>+</Text>
+                  </TouchableOpacity>
               <TextInput
                 style={styles.input}
                 placeholder="Price"
@@ -457,13 +503,6 @@ const ScanScreen = ({ route }) => {
         </TouchableOpacity>
 
         <Text style={styles.label}>Total: {calculateTotal()}</Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("Product")}
-        >
-          <Text style={styles.text}>Add Product</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -472,11 +511,9 @@ const ScanScreen = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     padding: 20,
     width: "100%",
-    top: 40,
+    top: 20,
   },
   input: {
     borderWidth: 1,
@@ -496,12 +533,10 @@ const styles = StyleSheet.create({
     padding: 15,
     margin: 10,
     borderRadius: 5,
-    width: "80%",
-    alignItems: "center",
+    width: "100%",
   },
   text: {
     fontSize: 16,
-    textAlign: "center",
     width: "100%",
   },
   scrollViewContainer: {
@@ -526,6 +561,33 @@ const styles = StyleSheet.create({
   productBox: {
     borderWidth: 2,
     padding: 15,
+  },
+  addButton: {
+    position: "absolute",
+    right: 10,
+    top: 12,
+    backgroundColor: "lightblue",
+    borderRadius: 50,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonText: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  paymentStatusContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  paymentStatusText: {
+    fontSize: 16,
+    marginRight: 10,
+  },
+  switch: {
+    transform: [{ scaleX: 1.5 }, { scaleY: 1.5 }],
   },
 });
 
