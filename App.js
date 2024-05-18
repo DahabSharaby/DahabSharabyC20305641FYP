@@ -58,7 +58,7 @@ export default function App() {
           component={ScannerScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="Input" component={InputScreen} />
+        <Stack.Screen name="Input" component={InputScreen} options={{headerShown: false}} />
         <Stack.Screen
           name="Dashboard"
           component={DashboardScreen}

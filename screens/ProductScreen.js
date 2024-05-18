@@ -151,6 +151,10 @@ const ProductScreen = () => {
     setSelectedProduct(null);
   };
 
+  const filteredProducts = products.filter(product =>
+    product.productName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <View style={{ flex: 1, padding: 20, top: 30 }}>
       <View
@@ -181,7 +185,7 @@ const ProductScreen = () => {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={products}
+        data={filteredProducts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => handleProductPress(item)}>
