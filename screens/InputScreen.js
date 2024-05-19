@@ -405,6 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     width: "100%",
+    top : 30,
   },
   content: {
     width: "100%",
