@@ -7,14 +7,14 @@ const AdminScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Admin Screen</Text>
+      <Text style={styles.title}>Admin Page</Text>
 
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Customer')}>
-        <Text style={styles.buttonText}>Add Customer</Text>
+        <Text style={styles.buttonText}>Customer Data</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Product')}>
-        <Text style={styles.buttonText}>Add Product</Text>
+        <Text style={styles.buttonText}>Product Data</Text>
       </TouchableOpacity>
 
       {/* <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('DeleteAccount')}>

@@ -586,7 +586,7 @@ const MainScreen = ({ navigation }) => {
               />
               <MenuItem
                 iconName="create-outline"
-                text="Input"
+                text="Manual Input"
                 onPress={() => handleMenuItemPress("Input")}
               />
               <MenuItem
@@ -602,7 +602,7 @@ const MainScreen = ({ navigation }) => {
               />
               <MenuItem
                 iconName="document-outline"
-                text="Invoice"
+                text="Invoices"
                 onPress={() => handleMenuItemPress("InvoiceScreen")}
               />
               <MenuItem
